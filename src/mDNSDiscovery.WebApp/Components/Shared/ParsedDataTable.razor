@@ -1,0 +1,25 @@
+@using mDNSDiscovery.WebApp.Services
+@using System.Web
+
+<table class="table table-sm table-striped mb-0 @(Level == 0 ? "property-container" : "")" style="margin-left: @(Level * 20)px;">
+    <thead>
+        <tr>
+            <th style="white-space: nowrap;">Key</th>
+            <th style="width: 100%;">Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var kvp in Data.OrderBy(k => k.Key))
+        {
+            <ParsedDataRow Key="@kvp.Key" Value="@kvp.Value" Level="@Level" />
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter]
+    public Dictionary<string, object> Data { get; set; } = null!;
+
+    [Parameter]
+    public int Level { get; set; }
+}

@@ -1,0 +1,128 @@
+@page "/about"
+@rendermode InteractiveServer
+
+<PageTitle>About - mDNS Discovery</PageTitle>
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/"><i class="bi bi-house"></i> Devices</a></li>
+            <li class="breadcrumb-item active" aria-current="page">About</li>
+        </ol>
+    </nav>
+
+    <div class="mb-4">
+        <h1 class="mb-3">
+            <i class="bi bi-info-circle"></i> About mDNS Discovery
+        </h1>
+        <p class="lead text-muted">
+            Network device discovery and analysis tool using mDNS/DNS-SD
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> What is mDNS Discovery?</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        mDNS Discovery is a powerful network analysis tool that helps you discover and analyze devices
+                        on your local network using multicast DNS (mDNS) and DNS-based Service Discovery (DNS-SD).
+                    </p>
+                    <p>
+                        The application automatically detects devices like:
+                    </p>
+                    <ul>
+                        <li><strong>Apple Devices</strong> - iPhones, iPads, Apple TVs, HomePods (via AirPlay/Bonjour)</li>
+                        <li><strong>Google Devices</strong> - Chromecast, Google Home, Nest devices</li>
+                        <li><strong>Printers</strong> - Network printers with IPP support</li>
+                        <li><strong>Smart Home Devices</strong> - IoT devices advertising via mDNS</li>
+                        <li><strong>Other Services</strong> - Any device or service using mDNS/DNS-SD</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-stars"></i> Features</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Automatic Discovery</strong> - Continuous scanning for devices on your network</li>
+                        <li><strong>Detailed Analysis</strong> - View device capabilities, properties, and metadata</li>
+                        <li><strong>Vendor-Specific Parsing</strong> - Specialized parsers for AirPlay, Chromecast, and printer devices</li>
+                        <li><strong>Network Diagnostics</strong> - Built-in ping, traceroute, DNS lookup, and Wake-on-LAN</li>
+                        <li><strong>Port Scanning</strong> - Identify open ports on discovered devices</li>
+                        <li><strong>Property Reference</strong> - Comprehensive guide to mDNS TXT record properties</li>
+                        <li><strong>Real-time Updates</strong> - Live device status with auto-refresh</li>
+                        <li><strong>Device Icons</strong> - Fetch and display device-specific icons</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-shield-check"></i> Privacy & Security</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        This application runs entirely on your local network and does not send any data to external servers.
+                        All device discovery and analysis happens within your network environment.
+                    </p>
+                    <p class="mb-0">
+                        <strong>Note:</strong> The network diagnostic features (ping, traceroute, port scanning) are provided
+                        for legitimate network administration purposes only. Always ensure you have permission to scan devices
+                        on your network.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Technology Stack</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Blazor Server</strong> - Interactive web UI</li>
+                        <li><strong>.NET 10</strong> - Latest .NET framework</li>
+                        <li><strong>Zeroconf</strong> - mDNS/DNS-SD library</li>
+                        <li><strong>Bootstrap 5</strong> - Modern UI framework</li>
+                        <li><strong>.NET Aspire</strong> - Cloud-ready application platform</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5><i class="bi bi-book"></i> Learn More</h5>
+                    <ul class="mb-0">
+                        <li>
+                            <a href="https://datatracker.ietf.org/doc/html/rfc6762" target="_blank" rel="noopener">
+                                RFC 6762 - Multicast DNS
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://datatracker.ietf.org/doc/html/rfc6763" target="_blank" rel="noopener">
+                                RFC 6763 - DNS-Based Service Discovery
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://developer.apple.com/bonjour/" target="_blank" rel="noopener">
+                                Apple Bonjour Documentation
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/properties">
+                                mDNS Property Reference
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

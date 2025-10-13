@@ -1,0 +1,282 @@
+@page "/network-map"
+@using mDNSDiscovery.WebApp.Services
+@using Microsoft.JSInterop
+@inject MdnsDiscoveryService DiscoveryService
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+
+<PageTitle>Network Topology Map</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3><i class="bi bi-diagram-3"></i> Network Topology Map</h3>
+        <div class="btn-group" role="group">
+            <button class="btn btn-sm btn-outline-primary" @onclick="RefreshMap">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleGrouping">
+                <i class="bi bi-collection"></i> @(GroupBySubnet ? "Ungroup" : "Group by Subnet")
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">@TotalDevices</h5>
+                    <p class="card-text text-muted">Total Devices</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">@UniqueSubnets</h5>
+                    <p class="card-text text-muted">Subnets</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">@TotalServices</h5>
+                    <p class="card-text text-muted">Services</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">@UniqueVendors</h5>
+                    <p class="card-text text-muted">Vendors</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Map Canvas -->
+    <div class="card">
+        <div class="card-body">
+            <div id="network-map-container" style="height: 600px; border: 1px solid #dee2e6; border-radius: 4px; position: relative; background: #f8f9fa;">
+                <canvas id="network-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+                <div id="network-tooltip" style="display: none; position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 1000; pointer-events: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-info-circle"></i> Legend</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <div style="width: 20px; height: 20px; background: #0d6efd; border-radius: 50%; margin-right: 8px;"></div>
+                        <span>Apple Devices</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <div style="width: 20px; height: 20px; background: #198754; border-radius: 50%; margin-right: 8px;"></div>
+                        <span>Google Devices</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <div style="width: 20px; height: 20px; background: #dc3545; border-radius: 50%; margin-right: 8px;"></div>
+                        <span>Printers/Scanners</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <div style="width: 20px; height: 20px; background: #6c757d; border-radius: 50%; margin-right: 8px;"></div>
+                        <span>Other Devices</span>
+                    </div>
+                </div>
+            </div>
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-lightbulb"></i>
+                <strong>Tip:</strong> Click on a device to view details. Drag to pan, scroll to zoom.
+            </div>
+        </div>
+    </div>
+
+    <!-- Subnet List -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-diagram-2"></i> Subnets</h6>
+        </div>
+        <div class="card-body">
+            @if (SubnetGroups.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Subnet</th>
+                                <th>Device Count</th>
+                                <th>Service Count</th>
+                                <th>IP Range</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var subnet in SubnetGroups.OrderByDescending(s => s.Value.Count()))
+                            {
+                                var devices = subnet.Value.ToList();
+                                var firstIp = devices.First().IPAddress;
+                                var lastIp = devices.Last().IPAddress;
+                                var serviceCount = devices.SelectMany(d => d.Endpoints).Count() + devices.Count;
+
+                                <tr>
+                                    <td><code>@subnet.Key</code></td>
+                                    <td>@devices.Count</td>
+                                    <td>@serviceCount</td>
+                                    <td><small>@firstIp - @lastIp</small></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">No devices discovered yet.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private IJSObjectReference? _jsModule;
+    private bool GroupBySubnet = true;
+    private int TotalDevices = 0;
+    private int UniqueSubnets = 0;
+    private int TotalServices = 0;
+    private int UniqueVendors = 0;
+    private Dictionary<string, IEnumerable<DeviceInfo>> SubnetGroups = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/network-map.js");
+            await RefreshMap();
+        }
+    }
+
+    private async Task RefreshMap()
+    {
+        var devices = DiscoveryService.GetDevices().ToList();
+
+        // Calculate statistics
+        TotalDevices = devices.GroupBy(d => d.IPAddress).Count();
+        TotalServices = devices.Count;
+
+        SubnetGroups = devices
+            .GroupBy(d => GetSubnet(d.IPAddress))
+            .ToDictionary(g => g.Key, g => g.AsEnumerable());
+
+        UniqueSubnets = SubnetGroups.Count;
+
+        UniqueVendors = devices
+            .Select(d => DeviceIconHelper.GetDeviceVendor(d))
+            .Where(v => !string.IsNullOrEmpty(v))
+            .Distinct()
+            .Count();
+
+        StateHasChanged();
+
+        if (_jsModule != null)
+        {
+            // Prepare network data for visualization
+            var networkData = PrepareNetworkData(devices);
+            await _jsModule.InvokeVoidAsync("renderNetworkMap", networkData, GroupBySubnet);
+        }
+    }
+
+    private async Task ToggleGrouping()
+    {
+        GroupBySubnet = !GroupBySubnet;
+        await RefreshMap();
+    }
+
+    private string GetSubnet(string ipAddress)
+    {
+        var parts = ipAddress.Split('.');
+        if (parts.Length == 4)
+        {
+            return $"{parts[0]}.{parts[1]}.{parts[2]}.0/24";
+        }
+        return "Unknown";
+    }
+
+    private object PrepareNetworkData(List<DeviceInfo> devices)
+    {
+        var nodes = new List<object>();
+        var links = new List<object>();
+
+        // Group by IP to avoid duplicates
+        var deviceGroups = devices.GroupBy(d => d.IPAddress).ToList();
+
+        foreach (var group in deviceGroups)
+        {
+            var primaryDevice = group.OrderByDescending(d => d.LastSeen).First();
+            var vendor = DeviceIconHelper.GetDeviceVendor(primaryDevice);
+            var deviceType = DeviceIconHelper.GetDeviceType(primaryDevice);
+            var subnet = GetSubnet(primaryDevice.IPAddress);
+
+            // Determine node color based on vendor/type
+            var color = GetNodeColor(vendor, deviceType);
+
+            var serviceCount = group.Count();
+            var serviceTypes = string.Join(", ", group.Select(d =>
+                d.ServiceType.Replace("._tcp.local.", "").Replace("._udp.local.", "").Replace("_", " ").Trim('.')
+            ).Take(3));
+
+            nodes.Add(new
+            {
+                id = primaryDevice.IPAddress,
+                label = primaryDevice.Name,
+                ip = primaryDevice.IPAddress,
+                vendor = vendor ?? "Unknown",
+                deviceType = deviceType,
+                subnet = subnet,
+                serviceCount = serviceCount,
+                services = serviceTypes,
+                color = color,
+                size = Math.Min(20 + serviceCount * 3, 40) // Node size based on service count
+            });
+        }
+
+        return new { nodes, links };
+    }
+
+    private string GetNodeColor(string? vendor, string deviceType)
+    {
+        if (vendor?.Contains("Apple") == true) return "#0d6efd"; // Blue
+        if (vendor?.Contains("Google") == true) return "#198754"; // Green
+        if (deviceType.Contains("Printer") || deviceType.Contains("Scanner")) return "#dc3545"; // Red
+        if (vendor?.Contains("Philips") == true) return "#fd7e14"; // Orange
+        if (vendor?.Contains("Sonos") == true) return "#6610f2"; // Purple
+        return "#6c757d"; // Gray
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // JavaScript side already disconnected
+            }
+        }
+    }
+}

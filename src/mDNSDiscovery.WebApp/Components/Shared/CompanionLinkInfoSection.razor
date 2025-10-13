@@ -1,0 +1,181 @@
+@using mDNSDiscovery.WebApp.Services
+@using mDNSDiscovery.WebApp.Services.Parsers
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-apple"></i> Apple Companion Link</h5>
+    </div>
+    <div class="card-body">
+        @if (!HasMatches && !string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-search"></i> No matches found for "<strong>@SearchTerm</strong>"
+            </div>
+        }
+        else
+        {
+            <dl class="row mb-0">
+                @if (!string.IsNullOrEmpty(CompanionLinkInfo.DeviceType))
+                {
+                    <dt class="col-sm-4">Device Type</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-primary">@CompanionLinkInfo.DeviceType</span>
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(CompanionLinkInfo.HostName))
+                {
+                    <dt class="col-sm-4">Host Name</dt>
+                    <dd class="col-sm-8">@CompanionLinkInfo.HostName</dd>
+                }
+                @if (!string.IsNullOrEmpty(CompanionLinkInfo.ModelIdentifier))
+                {
+                    <dt class="col-sm-4">Model Identifier</dt>
+                    <dd class="col-sm-8">
+                        <code style="font-size: 0.85rem;">@CompanionLinkInfo.ModelIdentifier</code>
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(CompanionLinkInfo.AppleDeviceId))
+                {
+                    <dt class="col-sm-4">Apple Device ID</dt>
+                    <dd class="col-sm-8">
+                        <code style="font-size: 0.85rem;">@CompanionLinkInfo.AppleDeviceId</code>
+                    </dd>
+                }
+                @if (CompanionLinkInfo.Port > 0)
+                {
+                    <dt class="col-sm-4">Companion Link Port</dt>
+                    <dd class="col-sm-8">@CompanionLinkInfo.Port</dd>
+                }
+                @if (!string.IsNullOrEmpty(CompanionLinkInfo.ProtocolVersion))
+                {
+                    <dt class="col-sm-4">Protocol Version</dt>
+                    <dd class="col-sm-8">@CompanionLinkInfo.ProtocolVersion</dd>
+                }
+                @if (!string.IsNullOrEmpty(CompanionLinkInfo.MacAddress))
+                {
+                    <dt class="col-sm-4">MAC Address</dt>
+                    <dd class="col-sm-8">
+                        <code style="font-size: 0.85rem;">@CompanionLinkInfo.MacAddress</code>
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(CompanionLinkInfo.BluetoothAddress))
+                {
+                    <dt class="col-sm-4">Bluetooth Address</dt>
+                    <dd class="col-sm-8">
+                        <code style="font-size: 0.85rem;">@CompanionLinkInfo.BluetoothAddress</code>
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(CompanionLinkInfo.HomeKitAddress))
+                {
+                    <dt class="col-sm-4">HomeKit Address</dt>
+                    <dd class="col-sm-8">
+                        <code style="font-size: 0.85rem;">@CompanionLinkInfo.HomeKitAddress</code>
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(CompanionLinkInfo.FeatureFlags))
+                {
+                    <dt class="col-sm-4">Feature Flags</dt>
+                    <dd class="col-sm-8">
+                        <code style="font-size: 0.85rem;">@CompanionLinkInfo.FeatureFlags</code>
+                        @if (CompanionLinkInfo.DecodedFeatureFlags.Any())
+                        {
+                            <div class="mt-2">
+                                <strong class="d-block mb-1">Supported Features:</strong>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var feature in CompanionLinkInfo.DecodedFeatureFlags)
+                                    {
+                                        <span class="badge bg-success">@feature</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </dd>
+                }
+            </dl>
+
+            @if (CompanionLinkInfo.Properties.Any())
+            {
+                <details class="mt-3">
+                    <summary class="text-primary" style="cursor: pointer;">View All TXT Record Properties</summary>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var prop in CompanionLinkInfo.Properties.OrderBy(p => p.Key))
+                                {
+                                    <tr>
+                                        <td><code style="font-size: 0.85rem;">@prop.Key</code></td>
+                                        <td>@prop.Value</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            }
+
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-info-circle"></i>
+                <strong>About Companion Link:</strong> This service enables communication between Apple devices
+                on the same network, allowing features like Handoff, Universal Clipboard, iPhone Cellular Calls
+                on Mac, and other Continuity features to work seamlessly.
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public CompanionLinkInfo CompanionLinkInfo { get; set; } = null!;
+
+    [Parameter]
+    public string SearchTerm { get; set; } = string.Empty;
+
+    private bool HasMatches
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(SearchTerm))
+                return true;
+
+            var searchLower = SearchTerm.ToLowerInvariant();
+
+            // Search in all text fields
+            if (CompanionLinkInfo.DeviceType?.ToLowerInvariant().Contains(searchLower) == true ||
+                CompanionLinkInfo.HostName?.ToLowerInvariant().Contains(searchLower) == true ||
+                CompanionLinkInfo.ModelIdentifier?.ToLowerInvariant().Contains(searchLower) == true ||
+                CompanionLinkInfo.AppleDeviceId?.ToLowerInvariant().Contains(searchLower) == true ||
+                CompanionLinkInfo.ProtocolVersion?.ToLowerInvariant().Contains(searchLower) == true ||
+                CompanionLinkInfo.MacAddress?.ToLowerInvariant().Contains(searchLower) == true ||
+                CompanionLinkInfo.BluetoothAddress?.ToLowerInvariant().Contains(searchLower) == true ||
+                CompanionLinkInfo.HomeKitAddress?.ToLowerInvariant().Contains(searchLower) == true ||
+                CompanionLinkInfo.FeatureFlags?.ToLowerInvariant().Contains(searchLower) == true)
+            {
+                return true;
+            }
+
+            // Search in decoded feature flags
+            if (CompanionLinkInfo.DecodedFeatureFlags.Any(f => f.ToLowerInvariant().Contains(searchLower)))
+            {
+                return true;
+            }
+
+            // Search in properties
+            foreach (var prop in CompanionLinkInfo.Properties)
+            {
+                if (prop.Key.ToLowerInvariant().Contains(searchLower) ||
+                    prop.Value.ToLowerInvariant().Contains(searchLower))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+}

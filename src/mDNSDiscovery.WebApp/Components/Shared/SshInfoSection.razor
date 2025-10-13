@@ -1,0 +1,137 @@
+@using mDNSDiscovery.WebApp.Services
+@using mDNSDiscovery.WebApp.Services.Parsers
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-terminal"></i> SSH Server Information</h5>
+    </div>
+    <div class="card-body">
+        @if (!HasMatches && !string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-search"></i> No matches found for "<strong>@SearchTerm</strong>"
+            </div>
+        }
+        else
+        {
+            <dl class="row mb-0">
+                @if (!string.IsNullOrEmpty(SshInfo.DeviceType))
+                {
+                    <dt class="col-sm-4">Device Type</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info">@SshInfo.DeviceType</span>
+                    </dd>
+                }
+                @if (SshInfo.Port > 0)
+                {
+                    <dt class="col-sm-4">SSH Port</dt>
+                    <dd class="col-sm-8">
+                        @SshInfo.Port
+                        @if (SshInfo.Port != 22)
+                        {
+                            <span class="badge bg-warning text-dark ms-2">Non-standard port</span>
+                        }
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(SshInfo.Username))
+                {
+                    <dt class="col-sm-4">Default Username</dt>
+                    <dd class="col-sm-8"><code style="font-size: 0.85rem;">@SshInfo.Username</code></dd>
+                }
+                @if (!string.IsNullOrEmpty(SshInfo.DefaultPath))
+                {
+                    <dt class="col-sm-4">Default Path</dt>
+                    <dd class="col-sm-8"><code style="font-size: 0.85rem;">@SshInfo.DefaultPath</code></dd>
+                }
+            </dl>
+
+            @if (SshInfo.Properties.Any())
+            {
+                <details class="mt-3">
+                    <summary class="text-primary" style="cursor: pointer;">View All TXT Record Properties</summary>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var prop in SshInfo.Properties.OrderBy(p => p.Key))
+                                {
+                                    <tr>
+                                        <td><code style="font-size: 0.85rem;">@prop.Key</code></td>
+                                        <td>@prop.Value</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            }
+
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-info-circle"></i>
+                <strong>SSH Access:</strong> You can connect to this device using an SSH client.
+                @if (SshInfo.Port == 22)
+                {
+                    <br/><code class="mt-1 d-inline-block">ssh user@(GetDeviceIp())</code>
+                }
+                else
+                {
+                    <br/><code class="mt-1 d-inline-block">ssh -p @SshInfo.Port user@(GetDeviceIp())</code>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public SshInfo SshInfo { get; set; } = null!;
+
+    [Parameter]
+    public string SearchTerm { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DeviceIpAddress { get; set; } = string.Empty;
+
+    private bool HasMatches
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(SearchTerm))
+                return true;
+
+            var searchLower = SearchTerm.ToLowerInvariant();
+
+            // Search in all text fields
+            if (SshInfo.DeviceType?.ToLowerInvariant().Contains(searchLower) == true ||
+                SshInfo.Username?.ToLowerInvariant().Contains(searchLower) == true ||
+                SshInfo.DefaultPath?.ToLowerInvariant().Contains(searchLower) == true ||
+                SshInfo.TxtVersion?.ToLowerInvariant().Contains(searchLower) == true ||
+                SshInfo.Port.ToString().Contains(searchLower))
+            {
+                return true;
+            }
+
+            // Search in properties
+            foreach (var prop in SshInfo.Properties)
+            {
+                if (prop.Key.ToLowerInvariant().Contains(searchLower) ||
+                    prop.Value.ToLowerInvariant().Contains(searchLower))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    private string GetDeviceIp()
+    {
+        return string.IsNullOrEmpty(DeviceIpAddress) ? "device-ip" : DeviceIpAddress;
+    }
+}

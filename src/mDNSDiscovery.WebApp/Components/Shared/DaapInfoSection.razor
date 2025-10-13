@@ -1,0 +1,147 @@
+@using mDNSDiscovery.WebApp.Services.Parsers
+
+@if (HasMatches)
+{
+    <div class="border rounded p-3 mb-3">
+        <h5 class="d-flex align-items-center gap-2">
+            <i class="bi bi-music-note-list"></i>
+            iTunes/Music Sharing (DAAP)
+            @if (DaapInfo.Available)
+            {
+                <span class="badge bg-success">Available</span>
+            }
+        </h5>
+
+        <div class="mt-3">
+            @if (!string.IsNullOrEmpty(DaapInfo.MachineName))
+            {
+                <div class="mb-2">
+                    <strong>Library Name:</strong> @DaapInfo.MachineName
+                </div>
+            }
+
+            @if (DaapInfo.DecodedMediaKinds.Any())
+            {
+                <div class="mb-2">
+                    <strong>Shared Media Types:</strong>
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                        @foreach (var kind in DaapInfo.DecodedMediaKinds)
+                        {
+                            <span class="badge bg-info">@kind</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (DaapInfo.ItemsCount.HasValue)
+            {
+                <div class="mb-2">
+                    <strong>Items in Library:</strong>
+                    <span class="badge bg-primary">@DaapInfo.ItemsCount.Value.ToString("N0")</span>
+                </div>
+            }
+
+            @if (DaapInfo.ContainersCount.HasValue)
+            {
+                <div class="mb-2">
+                    <strong>Playlists/Containers:</strong>
+                    <span class="badge bg-secondary">@DaapInfo.ContainersCount.Value</span>
+                </div>
+            }
+
+            @if (DaapInfo.PasswordProtected)
+            {
+                <div class="mb-2">
+                    <span class="badge bg-warning">
+                        <i class="bi bi-lock"></i> Password Protected
+                    </span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(DaapInfo.Version))
+            {
+                <div class="mb-2">
+                    <strong>DAAP Version:</strong> <code>@DaapInfo.Version</code>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(DaapInfo.iTunesShVersion))
+            {
+                <div class="mb-2">
+                    <strong>iTunes Sharing Version:</strong> <code>@DaapInfo.iTunesShVersion</code>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(DaapInfo.DatabaseId))
+            {
+                <div class="mb-2">
+                    <strong>Database ID:</strong> <code class="small">@DaapInfo.DatabaseId</code>
+                </div>
+            }
+
+            @if (DaapInfo.Port > 0)
+            {
+                <div class="mb-2">
+                    <strong>Port:</strong> <code>@DaapInfo.Port</code>
+                </div>
+            }
+
+            @if (DaapInfo.Properties.Any())
+            {
+                <details class="mt-3">
+                    <summary class="text-muted" style="cursor: pointer;">
+                        <small>All Properties (@DaapInfo.Properties.Count)</small>
+                    </summary>
+                    <div class="mt-2">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var prop in DaapInfo.Properties.OrderBy(p => p.Key))
+                                {
+                                    <tr>
+                                        <td><code>@prop.Key</code></td>
+                                        <td><code>@prop.Value</code></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            }
+
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-info-circle"></i>
+                <strong>About DAAP:</strong> Digital Audio Access Protocol allows sharing iTunes/Music libraries across the local network
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public DaapInfo DaapInfo { get; set; } = null!;
+    [Parameter] public string? SearchTerm { get; set; }
+
+    private bool HasMatches
+    {
+        get
+        {
+            if (DaapInfo == null) return false;
+            if (string.IsNullOrWhiteSpace(SearchTerm)) return true;
+
+            var term = SearchTerm.ToLowerInvariant();
+
+            return DaapInfo.MachineName?.ToLowerInvariant().Contains(term) == true ||
+                   DaapInfo.Version?.ToLowerInvariant().Contains(term) == true ||
+                   DaapInfo.iTunesShVersion?.ToLowerInvariant().Contains(term) == true ||
+                   DaapInfo.DatabaseId?.ToLowerInvariant().Contains(term) == true ||
+                   DaapInfo.DecodedMediaKinds.Any(k => k.ToLowerInvariant().Contains(term)) ||
+                   DaapInfo.Properties.Any(p => p.Key.ToLowerInvariant().Contains(term) ||
+                                                 p.Value.ToLowerInvariant().Contains(term));
+        }
+    }
+}

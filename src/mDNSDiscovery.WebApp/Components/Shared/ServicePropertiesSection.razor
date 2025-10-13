@@ -1,0 +1,115 @@
+@using mDNSDiscovery.WebApp.Services
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="mb-3 text-muted small">
+    <div><strong>Name:</strong> @Service.Name</div>
+    <div><strong>Service Identifier:</strong> <code style="font-size: 0.85rem;">@Service.ServiceType</code></div>
+</div>
+
+@if (Service.Properties.Any())
+{
+    <details class="mt-2">
+        <summary class="text-primary" style="cursor: pointer; user-select: none;">
+            <i class="bi bi-info-circle"></i> Service Properties (@Service.Properties.Count)
+        </summary>
+        <div class="table-responsive mt-2 property-container">
+            <table class="table table-sm table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th style="white-space: nowrap;">Property</th>
+                        <th style="width: 100%;">Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var prop in FilteredProperties)
+                    {
+                        var propDesc = PropertyDescriptionHelper.GetDescription(prop.Key);
+                        <tr class="property-row" data-property="@prop.Key.ToLowerInvariant()" data-value="@prop.Value.ToLowerInvariant()">
+                            <td style="white-space: nowrap;">
+                                @if (propDesc != null)
+                                {
+                                    <code style="font-size: 0.85rem; cursor: help; text-decoration: underline; text-decoration-style: dotted;"
+                                          data-bs-toggle="tooltip"
+                                          data-bs-placement="top"
+                                          data-bs-html="true"
+                                          title="<strong>@propDesc.Name</strong><br/>@propDesc.Description">@prop.Key</code>
+                                }
+                                else
+                                {
+                                    <code style="font-size: 0.85rem;">@prop.Key</code>
+                                }
+                            </td>
+                            <td style="word-break: break-word;">@prop.Value</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </details>
+}
+
+@code {
+    [Parameter]
+    public DeviceInfo Service { get; set; } = null!;
+
+    [Parameter]
+    public string PropertySearchTerm { get; set; } = string.Empty;
+
+    private IEnumerable<KeyValuePair<string, string>> FilteredProperties
+    {
+        get
+        {
+            var orderedProps = Service.Properties.OrderBy(p => p.Key);
+
+            if (string.IsNullOrWhiteSpace(PropertySearchTerm))
+                return orderedProps;
+
+            var searchTerm = PropertySearchTerm.ToLowerInvariant();
+            return orderedProps.Where(p =>
+                p.Key.ToLowerInvariant().Contains(searchTerm) ||
+                p.Value.ToLowerInvariant().Contains(searchTerm));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Initialize Bootstrap tooltips after the component renders
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle=""tooltip""]'));
+                tooltipTriggerList.forEach(function(el) {
+                    if (!bootstrap.Tooltip.getInstance(el)) {
+                        new bootstrap.Tooltip(el);
+                    }
+                });
+            ");
+        }
+        catch (Exception)
+        {
+            // Ignore JavaScript errors during disposal
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Dispose all tooltips when component is disposed
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle=""tooltip""]'));
+                tooltipTriggerList.forEach(function(el) {
+                    var tooltip = bootstrap.Tooltip.getInstance(el);
+                    if (tooltip) {
+                        tooltip.dispose();
+                    }
+                });
+            ");
+        }
+        catch (Exception)
+        {
+            // Ignore JavaScript errors during disposal
+        }
+    }
+}

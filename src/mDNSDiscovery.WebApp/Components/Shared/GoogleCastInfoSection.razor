@@ -1,0 +1,150 @@
+@using mDNSDiscovery.WebApp.Services
+@using mDNSDiscovery.WebApp.Services.Parsers
+@using mDNSDiscovery.WebApp.Components.Shared
+@using mDNSDiscovery.WebApp.Components.Pages
+@using System.Text.Json
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-google"></i> Google Cast Information</h5>
+    </div>
+    <div class="card-body">
+        @if (!HasMatches && !string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-search"></i> No matches found for "<strong>@SearchTerm</strong>"
+            </div>
+        }
+        else if (GoogleInfo.ParsedData != null)
+        {
+            <dl class="row mb-0">
+                @if (!string.IsNullOrEmpty(GoogleInfo.Name))
+                {
+                    <dt class="col-sm-4">Device Name</dt>
+                    <dd class="col-sm-8">@GoogleInfo.Name</dd>
+                }
+                @if (!string.IsNullOrEmpty(GoogleInfo.Model))
+                {
+                    <dt class="col-sm-4">Model</dt>
+                    <dd class="col-sm-8">@GoogleInfo.Model</dd>
+                }
+                @if (!string.IsNullOrEmpty(GoogleInfo.BuildVersion))
+                {
+                    <dt class="col-sm-4">Build Version</dt>
+                    <dd class="col-sm-8">@GoogleInfo.BuildVersion</dd>
+                }
+                @if (!string.IsNullOrEmpty(GoogleInfo.CastVersion))
+                {
+                    <dt class="col-sm-4">Cast Version</dt>
+                    <dd class="col-sm-8">@GoogleInfo.CastVersion</dd>
+                }
+                @if (!string.IsNullOrEmpty(GoogleInfo.Locale))
+                {
+                    <dt class="col-sm-4">Locale</dt>
+                    <dd class="col-sm-8">@GoogleInfo.Locale</dd>
+                }
+                @if (!string.IsNullOrEmpty(GoogleInfo.TimeZone))
+                {
+                    <dt class="col-sm-4">Timezone</dt>
+                    <dd class="col-sm-8">@GoogleInfo.TimeZone</dd>
+                }
+            </dl>
+
+            <details class="mt-3">
+                <summary class="text-primary" style="cursor: pointer;">View All Parsed Data</summary>
+                <div class="mt-2 p-3 bg-light border rounded">
+                    <ParsedDataTable Data="@GoogleInfo.ParsedData" Level="0" />
+                </div>
+            </details>
+
+            @if (!string.IsNullOrEmpty(GoogleInfo.RawData))
+            {
+                <details class="mt-2">
+                    <summary class="text-primary" style="cursor: pointer;">View Raw JSON Data</summary>
+                    <pre class="mt-2 p-3 bg-light border rounded" style="font-size: 0.75rem; max-height: 300px; overflow-y: auto;"><code>@PrettyPrintJson(GoogleInfo.RawData)</code></pre>
+                </details>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public ChromecastInfo GoogleInfo { get; set; } = null!;
+
+    [Parameter]
+    public string SearchTerm { get; set; } = string.Empty;
+
+    private bool HasMatches
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(SearchTerm))
+                return true;
+
+            var searchLower = SearchTerm.ToLowerInvariant();
+
+            // Search in all text fields
+            if (GoogleInfo.Name?.ToLowerInvariant().Contains(searchLower) == true ||
+                GoogleInfo.Model?.ToLowerInvariant().Contains(searchLower) == true ||
+                GoogleInfo.BuildVersion?.ToLowerInvariant().Contains(searchLower) == true ||
+                GoogleInfo.CastVersion?.ToLowerInvariant().Contains(searchLower) == true ||
+                GoogleInfo.Locale?.ToLowerInvariant().Contains(searchLower) == true ||
+                GoogleInfo.TimeZone?.ToLowerInvariant().Contains(searchLower) == true)
+            {
+                return true;
+            }
+
+            // Search in parsed data
+            if (GoogleInfo.ParsedData != null)
+            {
+                return SearchInParsedData(GoogleInfo.ParsedData, searchLower);
+            }
+
+            return false;
+        }
+    }
+
+    private bool SearchInParsedData(Dictionary<string, object> data, string searchTerm)
+    {
+        foreach (var kvp in data)
+        {
+            // Search in key
+            if (kvp.Key.ToLowerInvariant().Contains(searchTerm))
+                return true;
+
+            // Search in value
+            if (kvp.Value != null)
+            {
+                if (kvp.Value is string str && str.ToLowerInvariant().Contains(searchTerm))
+                    return true;
+
+                if (kvp.Value is Dictionary<string, object> dict && SearchInParsedData(dict, searchTerm))
+                    return true;
+
+                if (kvp.Value.ToString()?.ToLowerInvariant().Contains(searchTerm) == true)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private static string PrettyPrintJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return string.Empty;
+
+        try
+        {
+            var jsonElement = JsonSerializer.Deserialize<JsonElement>(json);
+            return JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+        catch
+        {
+            return json;
+        }
+    }
+}

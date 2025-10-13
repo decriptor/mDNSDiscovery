@@ -1,0 +1,577 @@
+@page "/device/{deviceId}"
+@using mDNSDiscovery.WebApp.Services
+@using mDNSDiscovery.WebApp.Components.Shared
+@using Microsoft.JSInterop
+@using System.Web
+@using System.Text.Json
+@inject MdnsDiscoveryService DiscoveryService
+@inject DeviceIconService IconService
+@inject DeviceQueryService QueryService
+@inject DeviceCacheService CacheService
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@implements IDisposable
+@rendermode InteractiveServer
+
+<PageTitle>@(CurrentDevice?.Name ?? "Device Details")</PageTitle>
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/"><i class="bi bi-house"></i> Devices</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@(CurrentDevice?.Name ?? "Unknown Device")</li>
+        </ol>
+    </nav>
+
+    @if (CurrentDevice == null)
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> Device not found or no longer available.
+        </div>
+        <a href="/" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Back to Devices
+        </a>
+    }
+    else
+    {
+        var icon = DeviceIconHelper.GetDeviceIcon(CurrentDevice);
+        var vendor = DeviceIconHelper.GetDeviceVendor(CurrentDevice);
+        var deviceType = DeviceIconHelper.GetDeviceType(CurrentDevice);
+
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Services Tabs -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Services</h5>
+                            <div class="d-flex gap-2 align-items-center">
+                                <input type="text" @bind="PropertySearchTerm" @bind:event="oninput" class="form-control form-control-sm" placeholder="Search properties..." style="width: 200px;">
+                                @if (ExtendedInfo == null)
+                                {
+                                    <button @onclick="QueryDeviceAsync" class="btn btn-sm btn-primary" disabled="@IsQuerying">
+                                        @if (IsQuerying)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-search"></i>
+                                        }
+                                        Query Device
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button @onclick="QueryDeviceAsync" class="btn btn-sm btn-outline-primary" disabled="@IsQuerying">
+                                        @if (IsQuerying)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        }
+                                        Refresh Query
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (AllServices.Count > 1)
+                        {
+                            <ul class="nav nav-tabs" id="serviceTabs" role="tablist">
+                                @for (int i = 0; i < AllServices.Count; i++)
+                                {
+                                    var service = AllServices[i];
+                                    var tabId = $"service-{i}";
+                                    var isActive = i == 0 ? "active" : "";
+                                    var serviceName = service.ServiceType.Replace("._tcp.local.", "").Replace("._udp.local.", "").Replace("_", " ").Trim('.');
+                                    var serviceIndex = i; // Capture for lambda
+
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link @isActive" id="@tabId-tab" data-bs-toggle="tab" data-bs-target="#@tabId" type="button" role="tab">
+                                            <i class="bi bi-gear"></i> @serviceName
+                                            @if (service.Port > 0)
+                                            {
+                                                <small class="text-muted">:@service.Port</small>
+                                            }
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                            <div class="tab-content mt-3" id="serviceTabContent">
+                                @for (int i = 0; i < AllServices.Count; i++)
+                                {
+                                    var service = AllServices[i];
+                                    var tabId = $"service-{i}";
+                                    var isActive = i == 0 ? "show active" : "";
+
+                                    <div class="tab-pane fade @isActive" id="@tabId" role="tabpanel">
+                                        <ServicePropertiesSection Service="@service" PropertySearchTerm="@PropertySearchTerm" />
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            var service = AllServices.FirstOrDefault() ?? CurrentDevice;
+                            <ServicePropertiesSection Service="@service" PropertySearchTerm="@PropertySearchTerm" />
+                        }
+                    </div>
+                </div>
+
+                @if (ExtendedInfo != null)
+                {
+                    <!-- Chromecast/Google Information -->
+                    @if (ExtendedInfo.GoogleInfo != null)
+                    {
+                        <GoogleCastInfoSection GoogleInfo="@ExtendedInfo.GoogleInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- AirPlay Information -->
+                    @if (ExtendedInfo.AppleInfo != null && ExtendedInfo.AppleInfo.Available)
+                    {
+                        <AirPlayInfoSection AppleInfo="@ExtendedInfo.AppleInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- HomeKit Information -->
+                    @if (ExtendedInfo.HomeKitInfo != null && ExtendedInfo.HomeKitInfo.Available)
+                    {
+                        <HomeKitInfoSection HomeKitInfo="@ExtendedInfo.HomeKitInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- SSH Server Information -->
+                    @if (ExtendedInfo.SshInfo != null && ExtendedInfo.SshInfo.Available)
+                    {
+                        <SshInfoSection SshInfo="@ExtendedInfo.SshInfo" SearchTerm="@PropertySearchTerm" DeviceIpAddress="@CurrentDevice.IPAddress" />
+                    }
+
+                    <!-- Matter Device Information -->
+                    @if (ExtendedInfo.MatterInfo != null && ExtendedInfo.MatterInfo.Available)
+                    {
+                        <MatterInfoSection MatterInfo="@ExtendedInfo.MatterInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- SMB File Share Information -->
+                    @if (ExtendedInfo.SmbInfo != null && ExtendedInfo.SmbInfo.Available)
+                    {
+                        <SmbInfoSection SmbInfo="@ExtendedInfo.SmbInfo" SearchTerm="@PropertySearchTerm" DeviceIpAddress="@CurrentDevice.IPAddress" />
+                    }
+
+                    <!-- Apple Companion Link Information -->
+                    @if (ExtendedInfo.CompanionLinkInfo != null && ExtendedInfo.CompanionLinkInfo.Available)
+                    {
+                        <CompanionLinkInfoSection CompanionLinkInfo="@ExtendedInfo.CompanionLinkInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- General Device Information -->
+                    @if (ExtendedInfo.GeneralDeviceInfo != null && ExtendedInfo.GeneralDeviceInfo.Available)
+                    {
+                        <GeneralDeviceInfoSection DeviceInfo="@ExtendedInfo.GeneralDeviceInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- Philips Hue Information -->
+                    @if (ExtendedInfo.HueInfo != null && ExtendedInfo.HueInfo.Available)
+                    {
+                        <HueInfoSection HueInfo="@ExtendedInfo.HueInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- HTTP Service Information -->
+                    @if (ExtendedInfo.HttpServiceInfo != null && ExtendedInfo.HttpServiceInfo.Available)
+                    {
+                        <HttpServiceInfoSection HttpServiceInfo="@ExtendedInfo.HttpServiceInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- Printer Information -->
+                    @if (ExtendedInfo.PrinterInfo != null && ExtendedInfo.PrinterInfo.Available)
+                    {
+                        <PrinterInfoSection PrinterInfo="@ExtendedInfo.PrinterInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- RAOP/AirPlay Audio Information -->
+                    @if (ExtendedInfo.RaopInfo != null && ExtendedInfo.RaopInfo.Available)
+                    {
+                        <RaopInfoSection RaopInfo="@ExtendedInfo.RaopInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- ADisk/Time Machine Information -->
+                    @if (ExtendedInfo.ADiskInfo != null && ExtendedInfo.ADiskInfo.Available)
+                    {
+                        <ADiskInfoSection ADiskInfo="@ExtendedInfo.ADiskInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- Scanner Information -->
+                    @if (ExtendedInfo.ScannerInfo != null && ExtendedInfo.ScannerInfo.Available)
+                    {
+                        <ScannerInfoSection ScannerInfo="@ExtendedInfo.ScannerInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- Homebridge Information -->
+                    @if (ExtendedInfo.HomebridgeInfo != null && ExtendedInfo.HomebridgeInfo.Available)
+                    {
+                        <HomebridgeInfoSection HomebridgeInfo="@ExtendedInfo.HomebridgeInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- Spotify Connect Information -->
+                    @if (ExtendedInfo.SpotifyConnectInfo != null && ExtendedInfo.SpotifyConnectInfo.Available)
+                    {
+                        <SpotifyConnectInfoSection SpotifyConnectInfo="@ExtendedInfo.SpotifyConnectInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- AirPlay Video Information -->
+                    @if (ExtendedInfo.AirPlayVideoInfo != null && ExtendedInfo.AirPlayVideoInfo.Available)
+                    {
+                        <AirPlayVideoInfoSection AirPlayVideoInfo="@ExtendedInfo.AirPlayVideoInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- iTunes/Music Sharing (DAAP) Information -->
+                    @if (ExtendedInfo.DaapInfo != null && ExtendedInfo.DaapInfo.Available)
+                    {
+                        <DaapInfoSection DaapInfo="@ExtendedInfo.DaapInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- AFP File Sharing Information -->
+                    @if (ExtendedInfo.AfpInfo != null && ExtendedInfo.AfpInfo.Available)
+                    {
+                        <AfpInfoSection AfpInfo="@ExtendedInfo.AfpInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- NFS Share Information -->
+                    @if (ExtendedInfo.NfsInfo != null && ExtendedInfo.NfsInfo.Available)
+                    {
+                        <NfsInfoSection NfsInfo="@ExtendedInfo.NfsInfo" SearchTerm="@PropertySearchTerm" />
+                    }
+
+                    <!-- Parser Errors -->
+                    @if (ExtendedInfo.ParserErrors.Any())
+                    {
+                        <div class="card mb-4 border-warning">
+                            <div class="card-header bg-warning bg-opacity-10">
+                                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Query Errors</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-3">The following services encountered errors while querying this device:</p>
+                                @foreach (var error in ExtendedInfo.ParserErrors)
+                                {
+                                    <div class="alert alert-warning mb-2">
+                                        <strong><i class="bi bi-x-circle"></i> @error.ParserName:</strong> @error.ErrorMessage
+                                        <details class="mt-2">
+                                            <summary class="text-muted small" style="cursor: pointer;">View full error details</summary>
+                                            <pre class="mt-2 mb-0 small bg-light p-2 rounded" style="font-size: 0.7rem; max-height: 200px; overflow-y: auto;"><code>@error.FullException</code></pre>
+                                        </details>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="col-lg-4">
+                @if (DeviceIcon != null)
+                {
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-image"></i> Device Icon</h6>
+                        </div>
+                        <div class="card-body text-center">
+                            <img src="@DeviceIcon.GetDataUri()" class="device-detail-icon" alt="@CurrentDevice.Name icon">
+                        </div>
+                    </div>
+                }
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="@icon"></i> @CurrentDevice.Name
+                            @if (!string.IsNullOrEmpty(vendor))
+                            {
+                                <span class="badge bg-secondary vendor-badge">@vendor</span>
+                            }
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="mb-0">
+                            <dt><i class="bi bi-hdd-network"></i> IP Address</dt>
+                            <dd class="ms-3">
+                                @if (ExtendedInfo?.NetworkInfo != null)
+                                {
+                                    if (ExtendedInfo.NetworkInfo.IsReachable)
+                                    {
+                                        <i class="bi bi-circle-fill text-success me-2" title="Reachable (@(ExtendedInfo.NetworkInfo.RoundtripTime)ms)"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-circle-fill text-danger me-2" title="Unreachable"></i>
+                                    }
+                                }
+                                @CurrentDevice.IPAddress
+                            </dd>
+                            <dt><i class="bi bi-clock"></i> Last Seen</dt>
+                            <dd class="ms-3">@CurrentDevice.LastSeen.ToLocalTime().ToString("MMM dd, yyyy HH:mm:ss")</dd>
+                            @if (!string.IsNullOrEmpty(vendor))
+                            {
+                                <dt>Manufacturer</dt>
+                                <dd class="ms-3">@vendor</dd>
+                            }
+                            <dt>Services</dt>
+                            <dd class="ms-3 mb-0">
+                                <ul class="list-unstyled mb-0 small">
+                                    @foreach (var service in AllServices)
+                                    {
+                                        var serviceName = service.ServiceType.Replace("._tcp.local.", "").Replace("._udp.local.", "").Replace("_", " ").Trim('.');
+                                        <li>
+                                            @serviceName
+                                            @if (service.Port > 0)
+                                            {
+                                                <span class="text-muted">:@service.Port</span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </dd>
+                            @if (ExtendedInfo?.OpenPorts.Any() == true)
+                            {
+                                <dt>Open Ports</dt>
+                                <dd class="ms-3 mb-0">
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var port in ExtendedInfo.OpenPorts)
+                                        {
+                                            <span class="badge bg-info" style="font-size: 0.75rem;">@port</span>
+                                        }
+                                    </div>
+                                </dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-link-45deg"></i> Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (CurrentDevice.Port > 0)
+                        {
+                            <a href="http://@CurrentDevice.IPAddress:@CurrentDevice.Port" target="_blank" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-box-arrow-up-right"></i> Open in Browser
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="http://@CurrentDevice.IPAddress" target="_blank" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-box-arrow-up-right"></i> Open IP Address
+                            </a>
+                        }
+                        <button @onclick="CopyIpToClipboard" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-clipboard"></i> @CopyButtonText
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-tools"></i> Network Diagnostics</h6>
+                    </div>
+                    <div class="card-body">
+                        <button @onclick="@(() => RunDiagnostic("ping"))" class="btn btn-outline-info w-100 mb-2">
+                            <i class="bi bi-reception-4"></i> Ping
+                        </button>
+                        <button @onclick="@(() => RunDiagnostic("traceroute"))" class="btn btn-outline-info w-100 mb-2">
+                            <i class="bi bi-signpost-split"></i> Traceroute
+                        </button>
+                        <button @onclick="@(() => RunDiagnostic("nslookup"))" class="btn btn-outline-info w-100 mb-2" title="Perform reverse DNS lookup on IP address">
+                            <i class="bi bi-search"></i> DNS Lookup
+                        </button>
+                        <button @onclick="@(() => RunDiagnostic("portscan"))" class="btn btn-outline-info w-100 mb-2" title="Scan common ports">
+                            <i class="bi bi-shield-check"></i> Port Scan
+                        </button>
+                        <button @onclick="@(() => RunDiagnostic("sslcert"))" class="btn btn-outline-info w-100 mb-2" title="Inspect SSL/TLS certificate">
+                            <i class="bi bi-file-earmark-lock"></i> SSL Certificate
+                        </button>
+                        <button @onclick="@(() => RunDiagnostic("bandwidth"))" class="btn btn-outline-info w-100 mb-2" title="Test latency and network quality">
+                            <i class="bi bi-speedometer"></i> Latency Test
+                        </button>
+                        @if (!string.IsNullOrEmpty(GetMacAddress()))
+                        {
+                            <button @onclick="@(() => RunDiagnostic("wakeonlan"))" class="btn btn-outline-warning w-100">
+                                <i class="bi bi-power"></i> Wake-on-LAN
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Diagnostic Results Modal -->
+<DiagnosticModal @ref="DiagnosticModalRef" />
+
+@code {
+    [Parameter]
+    public string DeviceId { get; set; } = string.Empty;
+
+    private DeviceInfo? CurrentDevice { get; set; }
+    private List<DeviceInfo> AllServices { get; set; } = new();
+    private DeviceIconData? DeviceIcon { get; set; }
+    private DeviceExtendedInfo? ExtendedInfo { get; set; }
+    private string PropertySearchTerm { get; set; } = string.Empty;
+    private bool IsQuerying { get; set; }
+    private string CopyButtonText { get; set; } = "Copy IP Address";
+    private DiagnosticModal? DiagnosticModalRef { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadDeviceAsync();
+    }
+
+    private async Task LoadDeviceAsync()
+    {
+        // Decode the device ID (format: "name_ipaddress")
+        var decodedId = HttpUtility.UrlDecode(DeviceId);
+
+        CurrentDevice = DiscoveryService.GetDevices()
+            .FirstOrDefault(d => $"{d.Name}_{d.IPAddress}" == decodedId);
+
+        if (CurrentDevice != null)
+        {
+            // Get all services for this IP address
+            AllServices = DiscoveryService.GetDevices()
+                .Where(d => d.IPAddress == CurrentDevice.IPAddress)
+                .OrderBy(d => d.ServiceType)
+                .ToList();
+
+            if (CurrentDevice.Properties.ContainsKey("ic"))
+            {
+                DeviceIcon = await IconService.GetDeviceIconAsync(CurrentDevice);
+            }
+
+            // Try to get extended info from cache
+            var cacheKey = $"{CurrentDevice.Name}_{CurrentDevice.IPAddress}";
+            ExtendedInfo = CacheService.Get(cacheKey);
+        }
+    }
+
+    private async Task QueryDeviceAsync()
+    {
+        if (CurrentDevice == null) return;
+
+        IsQuerying = true;
+        try
+        {
+            // Create a merged device with all service endpoints
+            var mergedDevice = new DeviceInfo
+            {
+                Name = CurrentDevice.Name,
+                IPAddress = CurrentDevice.IPAddress,
+                ServiceType = CurrentDevice.ServiceType,
+                Port = CurrentDevice.Port,
+                Properties = CurrentDevice.Properties,
+                LastSeen = CurrentDevice.LastSeen,
+                Endpoints = AllServices.Select(s => new ServiceEndpoint
+                {
+                    ServiceType = s.ServiceType,
+                    Port = s.Port,
+                    Properties = s.Properties,
+                    LastSeen = s.LastSeen
+                }).ToList()
+            };
+
+            ExtendedInfo = await QueryService.QueryDeviceAsync(mergedDevice);
+
+            // Cache the result
+            if (ExtendedInfo != null)
+            {
+                var cacheKey = $"{CurrentDevice.Name}_{CurrentDevice.IPAddress}";
+                CacheService.Set(cacheKey, ExtendedInfo);
+            }
+        }
+        finally
+        {
+            IsQuerying = false;
+        }
+    }
+
+    private async Task CopyIpToClipboard()
+    {
+        if (CurrentDevice == null) return;
+
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", CurrentDevice.IPAddress);
+        CopyButtonText = "Copied!";
+        StateHasChanged();
+
+        await Task.Delay(2000);
+        CopyButtonText = "Copy IP Address";
+        StateHasChanged();
+    }
+
+    private async Task RunDiagnostic(string type)
+    {
+        if (CurrentDevice == null || DiagnosticModalRef == null) return;
+
+        var target = type == "wakeonlan" ? GetMacAddress() : CurrentDevice.IPAddress;
+        if (string.IsNullOrEmpty(target)) return;
+
+        await DiagnosticModalRef.ShowAsync(type, target);
+    }
+
+    private string? GetMacAddress()
+    {
+        if (CurrentDevice == null) return null;
+
+        // Check AirPlay parsed data
+        if (ExtendedInfo?.AppleInfo?.Endpoints != null)
+        {
+            foreach (var endpoint in ExtendedInfo.AppleInfo.Endpoints)
+            {
+                if (endpoint.ParsedData?.ContainsKey("macAddress") == true)
+                {
+                    return endpoint.ParsedData["macAddress"]?.ToString();
+                }
+            }
+        }
+
+        // Check device properties as fallback
+        if (CurrentDevice.Properties.ContainsKey("macAddress"))
+        {
+            return CurrentDevice.Properties["macAddress"];
+        }
+
+        return null;
+    }
+
+    public static string PrettyPrintJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return string.Empty;
+
+        try
+        {
+            var jsonElement = JsonSerializer.Deserialize<JsonElement>(json);
+            return JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+        catch
+        {
+            // If it's not valid JSON, return as-is
+            return json;
+        }
+    }
+
+    public void Dispose()
+    {
+        // Clear component state to free memory when component is disposed
+        // This prevents memory growth in the Blazor Server circuit
+        ExtendedInfo = null;
+        AllServices?.Clear();
+        AllServices = null!;
+        CurrentDevice = null;
+        DeviceIcon = null;
+    }
+}

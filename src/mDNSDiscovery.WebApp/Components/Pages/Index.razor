@@ -1,0 +1,257 @@
+@page "/"
+@using mDNSDiscovery.WebApp.Services
+@using Microsoft.JSInterop
+@inject MdnsDiscoveryService DiscoveryService
+@inject DeviceIconService IconService
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+
+<PageTitle>Goodwin's mDNS Tool</PageTitle>
+
+<div class="container-fluid px-3 py-2">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">
+                <strong id="device-count">@GroupedDevices.Count()</strong> device(s) ·
+                <span id="service-count">@Devices.Count()</span> services
+            </span>
+            <span id="refresh-indicator" class="badge bg-success" style="opacity: 0; transition: opacity 0.3s;">
+                <i class="bi bi-check-circle"></i> Refreshed
+            </span>
+            <small id="last-refresh" class="text-muted"></small>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="refreshNow" class="btn btn-sm btn-outline-primary" type="button" title="Refresh now">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+            <button id="toggleAutoRefresh" class="btn btn-sm btn-outline-success" type="button" title="Pause auto-refresh">
+                <i class="bi bi-pause-circle"></i> <span id="autoRefreshText">Auto</span>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse">
+                <i class="bi bi-funnel"></i> Filters
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse mb-2" id="filtersCollapse">
+        <div class="card card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label for="filterVendor" class="form-label small mb-1">Vendor</label>
+                    <select id="filterVendor" class="form-select form-select-sm">
+                        <option value="">All Vendors</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filterType" class="form-label small mb-1">Type</label>
+                    <select id="filterType" class="form-select form-select-sm">
+                        <option value="">All Types</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="searchDevice" class="form-label small mb-1">Search</label>
+                    <input type="text" id="searchDevice" class="form-control form-control-sm" placeholder="Name or IP...">
+                </div>
+                <div class="col-md-2">
+                    <label for="sortBy" class="form-label small mb-1">Sort</label>
+                    <select id="sortBy" class="form-select form-select-sm">
+                        <option value="name">Name (A-Z)</option>
+                        <option value="name-desc">Name (Z-A)</option>
+                        <option value="ip">IP Address</option>
+                        <option value="lastseen" selected>Last Seen</option>
+                        <option value="lastseen-asc">Oldest First</option>
+                        <option value="vendor">Vendor</option>
+                        <option value="type">Type</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button id="clearFilters" class="btn btn-sm btn-outline-secondary w-100" title="Clear Filters">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2">
+                <span id="filteredCount" class="small text-muted"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="devices-container">
+        @if (!GroupedDevices.Any())
+        {
+            <div class="alert alert-warning">
+                <i class="bi bi-hourglass-split"></i> Scanning for devices... This may take a few moments.
+            </div>
+        }
+        else
+        {
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                @foreach (var group in GroupedDevices)
+                {
+                    // Use the primary device (first one, typically the main service)
+                    var primaryDevice = group.OrderByDescending(d => d.LastSeen).First();
+                    var icon = DeviceIconHelper.GetDeviceIcon(primaryDevice);
+                    var vendor = DeviceIconHelper.GetDeviceVendor(primaryDevice);
+                    var deviceType = DeviceIconHelper.GetDeviceType(primaryDevice);
+                    var deviceKey = $"{primaryDevice.Name}_{primaryDevice.IPAddress}";
+                    var deviceIcon = DeviceIcons.GetValueOrDefault(deviceKey);
+                    var allNames = string.Join(", ", group.Select(d => d.Name).Distinct());
+
+                    // Collect all searchable data: names, IP, service types, property keys and values
+                    var searchableData = new List<string>
+                    {
+                        allNames,
+                        primaryDevice.IPAddress
+                    };
+
+                    // Add all service types
+                    searchableData.AddRange(group.Select(d => d.ServiceType).Distinct());
+
+                    // Add all property keys and values from all devices in the group
+                    foreach (var device in group)
+                    {
+                        searchableData.AddRange(device.Properties.Keys);
+                        searchableData.AddRange(device.Properties.Values);
+
+                        // Also include properties from all endpoints
+                        foreach (var endpoint in device.Endpoints)
+                        {
+                            searchableData.AddRange(endpoint.Properties.Keys);
+                            searchableData.AddRange(endpoint.Properties.Values);
+                        }
+                    }
+
+                    var searchText = string.Join(" ", searchableData.Where(s => !string.IsNullOrWhiteSpace(s))).ToLowerInvariant();
+
+                    <div class="col device-card" data-vendor="@vendor" data-type="@deviceType" data-name="@allNames.ToLowerInvariant()" data-ip="@primaryDevice.IPAddress" data-search="@searchText">
+                        <div class="card h-100 shadow-sm" data-device-id="@deviceKey" data-last-seen="@primaryDevice.LastSeen.ToString("O")">
+                            @if (deviceIcon != null)
+                            {
+                                <img src="@deviceIcon.GetDataUri()" class="card-img-top device-custom-icon" alt="@primaryDevice.Name icon">
+                            }
+                            <div class="card-body">
+                                <h5 class="card-title mb-3">
+                                    <a href="/device/@deviceKey" class="device-title-link text-decoration-none">
+                                        @if (deviceIcon == null)
+                                        {
+                                            <i class="@icon"></i>
+                                        }
+                                        @primaryDevice.Name
+                                    </a>
+                                </h5>
+
+                                @if (!string.IsNullOrEmpty(vendor))
+                                {
+                                    <div class="mb-3">
+                                        <span class="badge bg-secondary">@vendor</span>
+                                    </div>
+                                }
+
+                                <ul class="list-unstyled small text-muted mb-2">
+                                    <li><i class="bi bi-hdd-network"></i> @primaryDevice.IPAddress</li>
+                                    <li><i class="bi bi-clock"></i> @primaryDevice.LastSeen.ToLocalTime().ToString("HH:mm:ss")</li>
+                                </ul>
+
+                                @if (group.Count() > 1)
+                                {
+                                    <div class="mt-2">
+                                        <div class="text-muted small mb-1"><strong>Services (@group.Count()):</strong></div>
+                                        <ul class="list-unstyled small ms-2 mb-0">
+                                            @foreach (var service in group.OrderBy(s => s.ServiceType))
+                                            {
+                                                <li class="text-muted">
+                                                    <i class="bi bi-arrow-return-right"></i>
+                                                    @service.ServiceType
+                                                    @if (service.Port > 0)
+                                                    {
+                                                        <span class="text-black-50">:@service.Port</span>
+                                                    }
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-muted small mt-2">
+                                        <i class="bi bi-arrow-return-right"></i> @primaryDevice.ServiceType
+                                        @if (primaryDevice.Port > 0)
+                                        {
+                                            <span class="text-black-50">:@primaryDevice.Port</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .spin {
+        animation: spin 1s linear infinite;
+        display: inline-block;
+    }
+</style>
+
+@code {
+    private IEnumerable<DeviceInfo> Devices { get; set; } = [];
+    private IEnumerable<IGrouping<string, DeviceInfo>> GroupedDevices { get; set; } = [];
+    private Dictionary<string, DeviceIconData?> DeviceIcons { get; set; } = new();
+    private IJSObjectReference? _jsModule;
+
+    protected override void OnInitialized()
+    {
+        LoadDevices();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Import the JavaScript module
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/index.js");
+
+            // Initialize the page functionality
+            await _jsModule.InvokeVoidAsync("initializeIndexPage");
+        }
+    }
+
+    private void LoadDevices()
+    {
+        Devices = DiscoveryService.GetDevices();
+
+        // Group devices by IP address
+        GroupedDevices = Devices.GroupBy(d => d.IPAddress)
+                                .OrderByDescending(g => g.Max(d => d.LastSeen));
+
+        // Don't fetch icons on initial page load - let the page render quickly
+        // Icons will be loaded via AJAX in the background
+        DeviceIcons = new Dictionary<string, DeviceIconData?>();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null)
+        {
+            try
+            {
+                await _jsModule.InvokeVoidAsync("disposeIndexPage");
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The JavaScript side has already disconnected
+            }
+        }
+    }
+}

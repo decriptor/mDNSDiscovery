@@ -1,0 +1,136 @@
+@using System.Text.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="modal fade" id="diagnosticModal" tabindex="-1" @ref="ModalElement">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="diagnosticModalTitle">@ModalTitle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" @onclick="CloseAsync"></button>
+            </div>
+            <div class="modal-body">
+                @if (IsLoading)
+                {
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Running diagnostic...</p>
+                    </div>
+                }
+                else if (DiagnosticResult != null)
+                {
+                    <div class="alert alert-secondary">
+                        <strong>Command:</strong> <code>@DiagnosticResult.Command</code>
+                    </div>
+                    <pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code>@DiagnosticResult.Output</code></pre>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="CloseAsync">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ElementReference ModalElement { get; set; }
+    private string ModalTitle { get; set; } = "Diagnostic Results";
+    private bool IsLoading { get; set; }
+    private DiagnosticResultModel? DiagnosticResult { get; set; }
+    private IJSObjectReference? _modalModule;
+
+    private readonly Dictionary<string, string> Titles = new()
+    {
+        { "ping", "Ping Results" },
+        { "traceroute", "Traceroute Results" },
+        { "nslookup", "DNS Lookup Results" },
+        { "portscan", "Port Scan Results" },
+        { "sslcert", "SSL Certificate Inspection" },
+        { "bandwidth", "Latency Test Results" },
+        { "wakeonlan", "Wake-on-LAN" }
+    };
+
+    public async Task ShowAsync(string type, string target)
+    {
+        ModalTitle = Titles.GetValueOrDefault(type, "Diagnostic Results");
+        IsLoading = true;
+        DiagnosticResult = null;
+
+        // Import modal helper module on first use
+        _modalModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/modal-helper.js");
+
+        // Show modal using safe JavaScript module
+        await _modalModule.InvokeVoidAsync("showModal", "diagnosticModal");
+
+        try
+        {
+            string relativeUrl;
+            if (type == "nslookup")
+            {
+                relativeUrl = $"/api/diagnostics/{type}?target={Uri.EscapeDataString(target)}";
+            }
+            else if (type == "wakeonlan")
+            {
+                relativeUrl = $"/api/diagnostics/{type}?mac={Uri.EscapeDataString(target)}";
+            }
+            else
+            {
+                relativeUrl = $"/api/diagnostics/{type}?ip={Uri.EscapeDataString(target)}";
+            }
+
+            // Construct full URL using base URI from NavigationManager
+            var baseUri = Navigation.BaseUri.TrimEnd('/');
+            var fullUrl = $"{baseUri}{relativeUrl}";
+
+            // HttpClient from factory should NOT be disposed - it's managed by the framework
+            var httpClient = HttpClientFactory.CreateClient();
+            using var response = await httpClient.GetAsync(fullUrl);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            DiagnosticResult = JsonSerializer.Deserialize<DiagnosticResultModel>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (Exception ex)
+        {
+            DiagnosticResult = new DiagnosticResultModel
+            {
+                Command = "Error",
+                Output = $"Failed to run diagnostic: {ex.Message}"
+            };
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    public async Task CloseAsync()
+    {
+        if (_modalModule != null)
+        {
+            await _modalModule.InvokeVoidAsync("hideModal", "diagnosticModal");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_modalModule != null)
+        {
+            await _modalModule.DisposeAsync();
+        }
+    }
+
+    private class DiagnosticResultModel
+    {
+        public string Command { get; set; } = string.Empty;
+        public string Output { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,185 @@
+@using mDNSDiscovery.WebApp.Services
+@using System.Web
+
+<tr class="property-row" data-property="@Key.ToLowerInvariant()" data-value="@GetSearchValue()">
+    <td style="vertical-align: top; white-space: nowrap;"><code style="font-size: 0.85rem;">@Key</code></td>
+    <td style="word-wrap: break-word; word-break: break-word;">
+        @RenderValue()
+    </td>
+</tr>
+
+@code {
+    [Parameter]
+    public string Key { get; set; } = string.Empty;
+
+    [Parameter]
+    public object Value { get; set; } = null!;
+
+    [Parameter]
+    public int Level { get; set; }
+
+    private string GetSearchValue()
+    {
+        var stringValue = Value?.ToString() ?? "";
+        return stringValue.Length > 200 ? stringValue.Substring(0, 200).ToLowerInvariant() : stringValue.ToLowerInvariant();
+    }
+
+    private RenderFragment RenderValue() => builder =>
+    {
+        if (Value is List<object> list)
+        {
+            if (list.Count == 0)
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "class", "badge bg-secondary");
+                builder.AddContent(2, "Empty Array");
+                builder.CloseElement();
+            }
+            else if (list.All(item => item is not Dictionary<string, object> && item is not List<object>))
+            {
+                // Simple array of primitives
+                builder.OpenElement(0, "div");
+                builder.AddAttribute(1, "class", "small");
+                builder.AddAttribute(2, "style", "word-wrap: break-word; word-break: break-word;");
+                builder.AddContent(3, string.Join(", ", list.Select(item => item?.ToString() ?? "")));
+                builder.CloseElement();
+            }
+            else
+            {
+                // Complex array
+                builder.OpenElement(0, "details");
+                builder.AddAttribute(1, "class", "mt-1");
+                builder.OpenElement(2, "summary");
+                builder.AddAttribute(3, "class", "text-info");
+                builder.AddAttribute(4, "style", "cursor: pointer;");
+                builder.AddContent(5, $"Array [{list.Count} items]");
+                builder.CloseElement();
+                builder.OpenElement(6, "div");
+                builder.AddAttribute(7, "class", "mt-2");
+                for (int idx = 0; idx < list.Count; idx++)
+                {
+                    var item = list[idx];
+                    if (item is Dictionary<string, object> dict)
+                    {
+                        builder.OpenElement(8 + idx * 3, "div");
+                        builder.AddAttribute(9 + idx * 3, "class", "mb-2");
+                        builder.OpenElement(10 + idx * 3, "strong");
+                        builder.AddContent(11 + idx * 3, $"[{idx}]");
+                        builder.CloseElement();
+                        builder.OpenComponent<ParsedDataTable>(12 + idx * 3);
+                        builder.AddAttribute(13 + idx * 3, "Data", dict);
+                        builder.AddAttribute(14 + idx * 3, "Level", Level + 1);
+                        builder.CloseComponent();
+                        builder.CloseElement();
+                    }
+                    else
+                    {
+                        builder.OpenElement(8 + idx * 3, "div");
+                        builder.AddAttribute(9 + idx * 3, "class", "mb-1");
+                        builder.AddAttribute(10 + idx * 3, "style", "word-wrap: break-word; word-break: break-word;");
+                        builder.OpenElement(11 + idx * 3, "strong");
+                        builder.AddContent(12 + idx * 3, $"[{idx}]: ");
+                        builder.CloseElement();
+                        builder.AddContent(13 + idx * 3, item?.ToString() ?? "");
+                        builder.CloseElement();
+                    }
+                }
+                builder.CloseElement();
+                builder.CloseElement();
+            }
+        }
+        else if (Value is Dictionary<string, object> dict)
+        {
+            builder.OpenElement(0, "details");
+            builder.AddAttribute(1, "class", "mt-1");
+            builder.OpenElement(2, "summary");
+            builder.AddAttribute(3, "class", "text-info");
+            builder.AddAttribute(4, "style", "cursor: pointer;");
+            builder.AddContent(5, $"Dictionary [{dict.Count} items]");
+            builder.CloseElement();
+            builder.OpenElement(6, "div");
+            builder.AddAttribute(7, "class", "mt-2");
+            builder.OpenComponent<ParsedDataTable>(8);
+            builder.AddAttribute(9, "Data", dict);
+            builder.AddAttribute(10, "Level", Level + 1);
+            builder.CloseComponent();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        else
+        {
+            // Handle primitive values
+            var stringValue = Value?.ToString() ?? "";
+
+            // Special handling for AirPlay features and statusFlags
+            if (Key.ToLowerInvariant() == "features" || Key.ToLowerInvariant() == "statusflags")
+            {
+                var decodedItems = Key.ToLowerInvariant() == "features"
+                    ? AirPlayHelper.DecodeFeatures(stringValue)
+                    : AirPlayHelper.DecodeStatusFlags(stringValue);
+
+                if (decodedItems.Any())
+                {
+                    var itemCount = decodedItems.Count;
+                    var itemType = Key.ToLowerInvariant() == "features" ? "Capabilities" : "Active Flags";
+
+                    builder.OpenElement(0, "div");
+                    builder.OpenElement(1, "span");
+                    builder.AddAttribute(2, "style", "word-wrap: break-word; word-break: break-word;");
+                    builder.AddContent(3, stringValue);
+                    builder.CloseElement();
+                    builder.OpenElement(4, "details");
+                    builder.AddAttribute(5, "class", "mt-1");
+                    builder.OpenElement(6, "summary");
+                    builder.AddAttribute(7, "class", "text-info");
+                    builder.AddAttribute(8, "style", "cursor: pointer; font-size: 0.85rem;");
+                    builder.AddContent(9, $"{itemCount} {itemType}");
+                    builder.CloseElement();
+                    builder.OpenElement(10, "ul");
+                    builder.AddAttribute(11, "class", "mt-2 mb-0 small");
+                    foreach (var item in decodedItems)
+                    {
+                        builder.OpenElement(12, "li");
+                        builder.AddContent(13, item);
+                        builder.CloseElement();
+                    }
+                    builder.CloseElement();
+                    builder.CloseElement();
+                    builder.CloseElement();
+                }
+                else
+                {
+                    builder.OpenElement(0, "span");
+                    builder.AddAttribute(1, "style", "word-wrap: break-word; word-break: break-word;");
+                    builder.AddContent(2, stringValue);
+                    builder.CloseElement();
+                }
+            }
+            else if (stringValue.Length > 100)
+            {
+                var truncated = stringValue.Substring(0, 100);
+                builder.OpenElement(0, "details");
+                builder.AddAttribute(1, "class", "mt-1");
+                builder.OpenElement(2, "summary");
+                builder.AddAttribute(3, "class", "text-muted");
+                builder.AddAttribute(4, "style", "cursor: pointer; word-wrap: break-word; word-break: break-word;");
+                builder.AddContent(5, truncated);
+                builder.AddMarkupContent(6, "... <small class='text-info'>[show full]</small>");
+                builder.CloseElement();
+                builder.OpenElement(7, "div");
+                builder.AddAttribute(8, "class", "mt-2 p-2 bg-white border rounded");
+                builder.AddAttribute(9, "style", "word-wrap: break-word; word-break: break-word; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;");
+                builder.AddContent(10, stringValue);
+                builder.CloseElement();
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "style", "word-wrap: break-word; word-break: break-word;");
+                builder.AddContent(2, stringValue);
+                builder.CloseElement();
+            }
+        }
+    };
+}

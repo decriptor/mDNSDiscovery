@@ -1,0 +1,133 @@
+@using mDNSDiscovery.WebApp.Services.Parsers
+
+@if (HasMatches)
+{
+    <div class="border rounded p-3 mb-3">
+        <h5 class="d-flex align-items-center gap-2">
+            <i class="bi bi-spotify"></i>
+            Spotify Connect
+            @if (SpotifyConnectInfo.Available)
+            {
+                <span class="badge bg-success">Available</span>
+            }
+        </h5>
+
+        <div class="mt-3">
+            @if (!string.IsNullOrEmpty(SpotifyConnectInfo.RemoteName))
+            {
+                <div class="mb-2">
+                    <strong>Device Name:</strong> @SpotifyConnectInfo.RemoteName
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(SpotifyConnectInfo.Version))
+            {
+                <div class="mb-2">
+                    <strong>Version:</strong> <code>@SpotifyConnectInfo.Version</code>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(SpotifyConnectInfo.Stack))
+            {
+                <div class="mb-2">
+                    <strong>Stack:</strong> <code>@SpotifyConnectInfo.Stack</code>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(SpotifyConnectInfo.DeviceId))
+            {
+                <div class="mb-2">
+                    <strong>Device ID:</strong> <code class="small">@SpotifyConnectInfo.DeviceId</code>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(SpotifyConnectInfo.ActiveUser))
+            {
+                <div class="mb-2">
+                    <strong>Active User:</strong> @SpotifyConnectInfo.ActiveUser
+                </div>
+            }
+
+            @if (SpotifyConnectInfo.AccountRequired)
+            {
+                <div class="mb-2">
+                    <span class="badge bg-warning">
+                        <i class="bi bi-lock"></i> Account Required
+                    </span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(SpotifyConnectInfo.CPath))
+            {
+                <div class="mb-2">
+                    <strong>Connection Path:</strong> <code>@SpotifyConnectInfo.CPath</code>
+                </div>
+            }
+
+            @if (SpotifyConnectInfo.Port > 0)
+            {
+                <div class="mb-2">
+                    <strong>Port:</strong> <code>@SpotifyConnectInfo.Port</code>
+                </div>
+            }
+
+            @if (SpotifyConnectInfo.Properties.Any())
+            {
+                <details class="mt-3">
+                    <summary class="text-muted" style="cursor: pointer;">
+                        <small>All Properties (@SpotifyConnectInfo.Properties.Count)</small>
+                    </summary>
+                    <div class="mt-2">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var prop in SpotifyConnectInfo.Properties.OrderBy(p => p.Key))
+                                {
+                                    <tr>
+                                        <td><code>@prop.Key</code></td>
+                                        <td><code>@prop.Value</code></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            }
+
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-info-circle"></i>
+                <strong>About Spotify Connect:</strong> Allows you to control playback on this device from any Spotify app
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public SpotifyConnectInfo SpotifyConnectInfo { get; set; } = null!;
+    [Parameter] public string? SearchTerm { get; set; }
+
+    private bool HasMatches
+    {
+        get
+        {
+            if (SpotifyConnectInfo == null) return false;
+            if (string.IsNullOrWhiteSpace(SearchTerm)) return true;
+
+            var term = SearchTerm.ToLowerInvariant();
+
+            return SpotifyConnectInfo.RemoteName?.ToLowerInvariant().Contains(term) == true ||
+                   SpotifyConnectInfo.Version?.ToLowerInvariant().Contains(term) == true ||
+                   SpotifyConnectInfo.Stack?.ToLowerInvariant().Contains(term) == true ||
+                   SpotifyConnectInfo.DeviceId?.ToLowerInvariant().Contains(term) == true ||
+                   SpotifyConnectInfo.ActiveUser?.ToLowerInvariant().Contains(term) == true ||
+                   SpotifyConnectInfo.CPath?.ToLowerInvariant().Contains(term) == true ||
+                   SpotifyConnectInfo.Properties.Any(p => p.Key.ToLowerInvariant().Contains(term) ||
+                                                           p.Value.ToLowerInvariant().Contains(term));
+        }
+    }
+}

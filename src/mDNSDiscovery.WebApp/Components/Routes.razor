@@ -1,0 +1,33 @@
+﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+    <Found Context="routeData">
+        <ErrorBoundary>
+            <ChildContent>
+                <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            </ChildContent>
+            <ErrorContent Context="exception">
+                <div class="container mt-5">
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> An error occurred</h4>
+                        <p>Sorry, an unexpected error has occurred. The application will attempt to recover.</p>
+                        <hr>
+                        <p class="mb-0">
+                            <button class="btn btn-primary" @onclick="NavigateHome">
+                                <i class="bi bi-house"></i> Return to Home
+                            </button>
+                        </p>
+                    </div>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
+    </Found>
+</Router>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private void NavigateHome()
+    {
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

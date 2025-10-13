@@ -1,0 +1,307 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+  background: #f8f9fa;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+
+/* Enhanced Device Cards */
+.card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: white;
+}
+
+.device-custom-icon {
+  max-height: 150px;
+  width: 100%;
+  object-fit: contain;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.device-detail-icon {
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #f8f9fa;
+  padding: 1rem;
+}
+
+.card-title {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.card-subtitle {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Navbar Enhancement */
+.navbar {
+  background: white !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #667eea !important;
+  transition: color 0.3s ease;
+}
+
+.navbar-brand:hover {
+  color: #764ba2 !important;
+}
+
+.navbar-brand i {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Alert Styling */
+.alert-info {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 10px;
+  color: #4a5568;
+}
+
+.alert-warning {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
+  border: 2px solid rgba(255, 193, 7, 0.3);
+  border-radius: 10px;
+}
+
+/* Page Title */
+h1 {
+  color: #2d3748;
+  font-weight: 700;
+}
+
+h1 i {
+  animation: rotate 3s linear infinite;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Device Properties */
+details summary {
+  font-weight: 600;
+  user-select: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+details summary:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+details[open] summary {
+  margin-bottom: 0.5rem;
+  background-color: rgba(102, 126, 234, 0.15);
+}
+
+.list-group-item {
+  background-color: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.9rem;
+}
+
+/* Footer */
+.footer {
+  background: white;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.col {
+  animation: fadeIn 0.5s ease-out;
+}
+
+
+.card ul li {
+  transition: opacity 0.15s ease-in-out;
+}
+
+/* Badge/Count Styling */
+#device-count {
+  font-weight: 600;
+}
+
+/* Vendor Badge */
+.vendor-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Filter card styling */
+.form-label {
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-select, .form-control {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.form-select:focus, .form-control:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#filteredCount {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Device Details Page */
+.device-title-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.device-title-link:hover {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.breadcrumb {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+
+.breadcrumb-item a {
+  color: #667eea;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.breadcrumb-item a:hover {
+  color: #764ba2;
+}
+
+.info-box {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.info-box label {
+  font-size: 0.85rem;
+  color: #718096;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.info-box .info-value {
+  font-size: 1.1rem;
+  color: #2d3748;
+  font-weight: 500;
+}
+
+/* Property Reference Page */
+.property-key {
+  font-weight: 600;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.property-group {
+  transition: opacity 0.2s ease;
+}
+
+.property-row {
+  transition: background-color 0.15s ease;
+}
+
+.property-name {
+  border-bottom: 1px dotted #667eea;
+}
+
+.property-name:hover {
+  color: #667eea;
+}
+
+/* Tooltip Styling */
+.tooltip {
+  font-size: 0.85rem;
+}
+
+.tooltip-inner {
+  max-width: 300px;
+  text-align: left;
+  background-color: rgba(45, 55, 72, 0.95);
+}

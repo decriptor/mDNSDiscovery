@@ -1,0 +1,131 @@
+@page "/properties"
+@using mDNSDiscovery.WebApp.Services
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<PageTitle>mDNS Property Reference</PageTitle>
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/"><i class="bi bi-house"></i> Devices</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Property Reference</li>
+        </ol>
+    </nav>
+
+    <div class="mb-4">
+        <h1 class="mb-3">
+            <i class="bi bi-book"></i> mDNS Property Reference
+        </h1>
+        <p class="lead text-muted">
+            Comprehensive guide to mDNS/DNS-SD TXT record properties used by network devices.
+        </p>
+    </div>
+
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i>
+        <strong>About mDNS Properties:</strong>
+        Devices advertise themselves on the network using mDNS (Multicast DNS) and include TXT records
+        with key-value pairs that provide additional information about their capabilities, configuration,
+        and status. This reference documents the most common properties you'll encounter.
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" @bind="SearchTerm" @bind:event="oninput" class="form-control" placeholder="Search properties...">
+            </div>
+        </div>
+    </div>
+
+    @foreach (var group in FilteredPropertyGroups)
+    {
+        <div class="card mb-4 property-group">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-tag"></i> @group.Name</h4>
+                <p class="mb-0 mt-2 text-muted small">@group.Description</p>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%">Property Key</th>
+                                <th style="width: 25%">Name</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var prop in FilteredProperties(group))
+                            {
+                                <tr class="property-row" data-search-text="@(prop.Key.ToLowerInvariant()) @(prop.Description.Name.ToLowerInvariant()) @(prop.Description.Description.ToLowerInvariant())">
+                                    <td><code class="property-key">@prop.Key</code></td>
+                                    <td><strong>@prop.Description.Name</strong></td>
+                                    <td class="text-muted">@prop.Description.Description</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card bg-light">
+        <div class="card-body">
+            <h5><i class="bi bi-lightbulb"></i> Additional Resources</h5>
+            <ul class="mb-0">
+                <li>
+                    <a href="https://datatracker.ietf.org/doc/html/rfc6763" target="_blank" rel="noopener">
+                        RFC 6763 - DNS-Based Service Discovery
+                    </a>
+                </li>
+                <li>
+                    <a href="http://www.dns-sd.org/txtrecords.html" target="_blank" rel="noopener">
+                        DNS-SD TXT Record Format
+                    </a>
+                </li>
+                <li>
+                    <a href="https://developer.apple.com/bonjour/" target="_blank" rel="noopener">
+                        Apple Bonjour Documentation
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IEnumerable<PropertyGroup> PropertyGroups { get; set; } = [];
+    private string SearchTerm { get; set; } = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        PropertyGroups = PropertyDescriptionHelper.GetAllPropertyGroups();
+    }
+
+    private IEnumerable<PropertyGroup> FilteredPropertyGroups
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(SearchTerm))
+                return PropertyGroups;
+
+            var searchLower = SearchTerm.ToLowerInvariant();
+            return PropertyGroups.Where(g => FilteredProperties(g).Any());
+        }
+    }
+
+    private IEnumerable<(string Key, PropertyDescription Description)> FilteredProperties(PropertyGroup group)
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+            return group.Properties;
+
+        var searchLower = SearchTerm.ToLowerInvariant();
+        return group.Properties.Where(p =>
+            p.Key.ToLowerInvariant().Contains(searchLower) ||
+            p.Description.Name.ToLowerInvariant().Contains(searchLower) ||
+            p.Description.Description.ToLowerInvariant().Contains(searchLower));
+    }
+}

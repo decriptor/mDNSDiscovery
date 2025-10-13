@@ -1,0 +1,172 @@
+@using mDNSDiscovery.WebApp.Services
+@using mDNSDiscovery.WebApp.Services.Parsers
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-house-heart"></i> Matter Device Information</h5>
+    </div>
+    <div class="card-body">
+        @if (!HasMatches && !string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-search"></i> No matches found for "<strong>@SearchTerm</strong>"
+            </div>
+        }
+        else
+        {
+            <dl class="row mb-0">
+                @if (!string.IsNullOrEmpty(MatterInfo.DeviceTypeName))
+                {
+                    <dt class="col-sm-4">Device Type</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-primary">@MatterInfo.DeviceTypeName</span>
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(MatterInfo.DeviceName))
+                {
+                    <dt class="col-sm-4">Device Name</dt>
+                    <dd class="col-sm-8">@MatterInfo.DeviceName</dd>
+                }
+                @if (!string.IsNullOrEmpty(MatterInfo.VendorName))
+                {
+                    <dt class="col-sm-4">Manufacturer</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-secondary">@MatterInfo.VendorName</span>
+                        @if (!string.IsNullOrEmpty(MatterInfo.VendorId))
+                        {
+                            <small class="text-muted ms-2">(Vendor ID: @MatterInfo.VendorId)</small>
+                        }
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(MatterInfo.ProductId))
+                {
+                    <dt class="col-sm-4">Product ID</dt>
+                    <dd class="col-sm-8"><code style="font-size: 0.85rem;">@MatterInfo.ProductId</code></dd>
+                }
+                @if (!string.IsNullOrEmpty(MatterInfo.Discriminator))
+                {
+                    <dt class="col-sm-4">Discriminator</dt>
+                    <dd class="col-sm-8"><code style="font-size: 0.85rem;">@MatterInfo.Discriminator</code></dd>
+                }
+                @if (MatterInfo.Port > 0)
+                {
+                    <dt class="col-sm-4">Matter Port</dt>
+                    <dd class="col-sm-8">@MatterInfo.Port</dd>
+                }
+                @if (!string.IsNullOrEmpty(MatterInfo.TransportProtocol))
+                {
+                    <dt class="col-sm-4">Transport Protocol</dt>
+                    <dd class="col-sm-8">
+                        <code style="font-size: 0.85rem;">@MatterInfo.TransportProtocol</code>
+                        @if (MatterInfo.SupportedTransports.Any())
+                        {
+                            <div class="mt-1">
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var transport in MatterInfo.SupportedTransports)
+                                    {
+                                        <span class="badge bg-info">@transport</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(MatterInfo.CommissioningMode))
+                {
+                    <dt class="col-sm-4">Commissioning Mode</dt>
+                    <dd class="col-sm-8">
+                        <code style="font-size: 0.85rem;">@MatterInfo.CommissioningMode</code>
+                        @if (!string.IsNullOrEmpty(MatterInfo.CommissioningModeDescription))
+                        {
+                            <div class="mt-1">
+                                <span class="badge bg-secondary">@MatterInfo.CommissioningModeDescription</span>
+                            </div>
+                        }
+                    </dd>
+                }
+                @if (!string.IsNullOrEmpty(MatterInfo.PairingInstruction))
+                {
+                    <dt class="col-sm-4">Pairing Instruction</dt>
+                    <dd class="col-sm-8">@MatterInfo.PairingInstruction</dd>
+                }
+            </dl>
+
+            @if (MatterInfo.Properties.Any())
+            {
+                <details class="mt-3">
+                    <summary class="text-primary" style="cursor: pointer;">View All TXT Record Properties</summary>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var prop in MatterInfo.Properties.OrderBy(p => p.Key))
+                                {
+                                    <tr>
+                                        <td><code style="font-size: 0.85rem;">@prop.Key</code></td>
+                                        <td>@prop.Value</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            }
+
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-info-circle"></i>
+                <strong>About Matter:</strong> Matter is a unified smart home connectivity standard that allows devices
+                from different manufacturers to work together seamlessly. This device can be controlled through any
+                Matter-compatible app or hub (Apple Home, Google Home, Amazon Alexa, etc.).
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public MatterInfo MatterInfo { get; set; } = null!;
+
+    [Parameter]
+    public string SearchTerm { get; set; } = string.Empty;
+
+    private bool HasMatches
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(SearchTerm))
+                return true;
+
+            var searchLower = SearchTerm.ToLowerInvariant();
+
+            // Search in all text fields
+            if (MatterInfo.DeviceTypeName?.ToLowerInvariant().Contains(searchLower) == true ||
+                MatterInfo.DeviceName?.ToLowerInvariant().Contains(searchLower) == true ||
+                MatterInfo.VendorName?.ToLowerInvariant().Contains(searchLower) == true ||
+                MatterInfo.VendorId?.ToLowerInvariant().Contains(searchLower) == true ||
+                MatterInfo.ProductId?.ToLowerInvariant().Contains(searchLower) == true ||
+                MatterInfo.Discriminator?.ToLowerInvariant().Contains(searchLower) == true ||
+                MatterInfo.CommissioningMode?.ToLowerInvariant().Contains(searchLower) == true ||
+                MatterInfo.PairingInstruction?.ToLowerInvariant().Contains(searchLower) == true)
+            {
+                return true;
+            }
+
+            // Search in properties
+            foreach (var prop in MatterInfo.Properties)
+            {
+                if (prop.Key.ToLowerInvariant().Contains(searchLower) ||
+                    prop.Value.ToLowerInvariant().Contains(searchLower))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+}
