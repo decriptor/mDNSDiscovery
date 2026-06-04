@@ -13,7 +13,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\mDNSDiscovery.Core\mDNSDiscovery.Core.csproj" />
     <ProjectReference Include="..\mDNSDiscovery.ServiceDefaults\mDNSDiscovery.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- DeviceInfo / ServiceEndpoint / ServiceCatalog live in mDNSDiscovery.Core; surface them
+         project-wide so the Services, Parsers, and Razor components compile without per-file usings. -->
+    <Using Include="mDNSDiscovery.Core" />
   </ItemGroup>
 
 </Project>

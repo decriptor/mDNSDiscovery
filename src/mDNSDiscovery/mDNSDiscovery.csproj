@@ -5,10 +5,28 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>mDNSDiscovery.Cli</RootNamespace>
+    <AssemblyName>mdns</AssemblyName>
+
+    <!-- Installable as a .NET local/global tool (see the mdns-cli skill for the install command). -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mdns</ToolCommandName>
+    <PackageId>mDNSDiscovery.Cli</PackageId>
+    <Description>Command-line mDNS / DNS-SD device discovery for the local network.</Description>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Zeroconf" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\mDNSDiscovery.Core\mDNSDiscovery.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="mDNSDiscovery.Core" />
   </ItemGroup>
 
 </Project>

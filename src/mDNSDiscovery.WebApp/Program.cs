@@ -75,11 +75,13 @@ builder.Services.AddSingleton<DeviceQueryService>();
 builder.Services.AddSingleton<NetworkDiagnosticsService>();
 builder.Services.AddSingleton<DeviceCacheService>();
 builder.Services.AddSingleton<DeviceHttpClient>();
-builder.Services.AddHostedService<MdnsDiscoveryService>();
 builder.Services.AddHostedService<CacheCleanupService>();
-builder.Services.AddSingleton<MdnsDiscoveryService>(sp =>
-    (MdnsDiscoveryService)sp.GetServices<IHostedService>()
-        .First(s => s is MdnsDiscoveryService));
+
+// Single shared MdnsDiscoveryService instance: hosted (runs the scan loop) and injectable
+// into components (which read its live device cache).
+builder.Services.AddSingleton<MdnsScanner>();
+builder.Services.AddSingleton<MdnsDiscoveryService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MdnsDiscoveryService>());
 
 var app = builder.Build();
 

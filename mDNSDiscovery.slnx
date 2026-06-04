@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/mDNSDiscovery.AppHost/mDNSDiscovery.AppHost.csproj" />
+    <Project Path="src/mDNSDiscovery.Core/mDNSDiscovery.Core.csproj" />
     <Project Path="src/mDNSDiscovery.ServiceDefaults/mDNSDiscovery.ServiceDefaults.csproj" />
     <Project Path="src/mDNSDiscovery.WebApp/mDNSDiscovery.WebApp.csproj" />
     <Project Path="src/mDNSDiscovery/mDNSDiscovery.csproj" />
