@@ -1,0 +1,5 @@
+{
+  "appHost": {
+    "path": "src/mDNSDiscovery.AppHost/mDNSDiscovery.AppHost.csproj"
+  }
+}

@@ -1,6 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.1" />
+<Project Sdk="Aspire.AppHost.Sdk/13.4.2">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,10 +7,6 @@
     <Nullable>enable</Nullable>
     <UserSecretsId>ebfab59e-12ed-4012-8c1a-2b47025f860d</UserSecretsId>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\mDNSDiscovery.WebApp\mDNSDiscovery.WebApp.csproj" />
