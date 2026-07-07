@@ -36,18 +36,24 @@ Run `... -- <command> --help` for the authoritative option list.
 |---|---|---|---|---|
 | `--service` | `-s` | scan, watch | (full catalog) | Service type to scan for; **repeatable**. Shorthand (`airplay`) or full type (`_airplay._tcp.local.`). Omit to scan the whole catalog. |
 | `--timeout` | `-t` | scan, watch | scan `5`, watch `2` | Seconds to listen for responses in each scan window. |
+| `--retries` | `-r` | scan, watch | `2` | Times to re-send the query per scan window. Raise it on lossy networks so slow-to-answer devices are less likely to be missed. |
 | `--interval` | `-i` | watch | `30` | Seconds to wait between scan cycles. |
 | `--format` | `-f` | all | `table` | `table`, `json`, or `ndjson`. |
 
 All service types are resolved within a **single** scan window, so `--timeout` is the
-total listen time, not per-type.
+total listen time, not per-type. Because that one window is shared across every service
+type, a device that drops its reply has fewer chances to be heard than a long-running
+`watch` (which re-scans every cycle); on a busy or lossy network, bump `--retries` (or
+`--timeout`) for a more complete one-shot `scan`.
 
 ## Output formats
 
 - `table` — human-readable Spectre.Console table (Name · IP · Services · Port). `watch`
   renders this as a live-updating table.
-- `json` — one pretty-printed JSON array of device objects (full TXT records included).
-- `ndjson` — one compact JSON device object per line; stream-friendly. In `watch`, any
+- `json` — one pretty-printed JSON array (device objects with full TXT records, or the
+  service-type strings for `list-types`).
+- `ndjson` — one compact JSON value per line; stream-friendly (a device object per line
+  for `scan`/`watch`, a service-type string per line for `list-types`). In `watch`, any
   non-`table` format streams NDJSON, re-emitting the current device set each cycle.
 
 ## Exit codes (scan)

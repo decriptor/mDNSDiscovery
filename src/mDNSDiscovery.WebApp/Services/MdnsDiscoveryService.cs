@@ -33,7 +33,7 @@ public class MdnsDiscoveryService : BackgroundService
         {
             try
             {
-                await _scanner.ScanIntoAsync(_devices, ServiceCatalog.Default, ScanTime, stoppingToken);
+                await _scanner.ScanIntoAsync(_devices, ServiceCatalog.Default, ScanTime, cancellationToken: stoppingToken);
 
                 MdnsScanner.EvictOlderThan(_devices, DeviceTtl);
 

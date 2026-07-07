@@ -1,5 +1,5 @@
 using System.CommandLine;
-using System.Text.Json;
+using mDNSDiscovery.Cli.Output;
 using Spectre.Console;
 
 namespace mDNSDiscovery.Cli.Commands;
@@ -37,9 +37,7 @@ public static class ListTypesCommand
             }
             else
             {
-                Console.WriteLine(JsonSerializer.Serialize(
-                    ServiceCatalog.Default,
-                    new JsonSerializerOptions { WriteIndented = format == OutputFormat.Json }));
+                Console.WriteLine(DeviceFormatter.FormatServiceTypes(ServiceCatalog.Default, format));
             }
 
             return 0;

@@ -14,6 +14,7 @@ public static class WatchCommand
     {
         var serviceOption = CliOptions.Service();
         var timeoutOption = CliOptions.Timeout(defaultSeconds: 2);
+        var retriesOption = CliOptions.Retries();
         var intervalOption = CliOptions.Interval();
         var formatOption = CliOptions.Format();
 
@@ -21,6 +22,7 @@ public static class WatchCommand
         {
             serviceOption,
             timeoutOption,
+            retriesOption,
             intervalOption,
             formatOption,
         };
@@ -29,6 +31,7 @@ public static class WatchCommand
         {
             var filters = parseResult.GetValue(serviceOption) ?? [];
             var timeout = parseResult.GetValue(timeoutOption);
+            var retries = parseResult.GetValue(retriesOption);
             var interval = parseResult.GetValue(intervalOption);
             var format = parseResult.GetValue(formatOption);
 
@@ -42,11 +45,11 @@ public static class WatchCommand
             {
                 if (format == OutputFormat.Table)
                 {
-                    await WatchTableAsync(scanner, cache, serviceTypes, scanTime, delay, cancellationToken);
+                    await WatchTableAsync(scanner, cache, serviceTypes, scanTime, retries, delay, cancellationToken);
                 }
                 else
                 {
-                    await WatchStreamAsync(scanner, cache, serviceTypes, scanTime, delay, cancellationToken);
+                    await WatchStreamAsync(scanner, cache, serviceTypes, scanTime, retries, delay, cancellationToken);
                 }
 
                 return 0;
@@ -65,6 +68,7 @@ public static class WatchCommand
         ConcurrentDictionary<string, DeviceInfo> cache,
         IReadOnlyList<string> serviceTypes,
         TimeSpan scanTime,
+        int retries,
         TimeSpan delay,
         CancellationToken cancellationToken)
     {
@@ -73,7 +77,7 @@ public static class WatchCommand
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    await scanner.ScanIntoAsync(cache, serviceTypes, scanTime, cancellationToken);
+                    await scanner.ScanIntoAsync(cache, serviceTypes, scanTime, retries, cancellationToken);
                     MdnsScanner.EvictOlderThan(cache, DeviceTtl);
 
                     var devices = cache.Values.OrderBy(d => d.Name).ToList();
@@ -91,12 +95,13 @@ public static class WatchCommand
         ConcurrentDictionary<string, DeviceInfo> cache,
         IReadOnlyList<string> serviceTypes,
         TimeSpan scanTime,
+        int retries,
         TimeSpan delay,
         CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            await scanner.ScanIntoAsync(cache, serviceTypes, scanTime, cancellationToken);
+            await scanner.ScanIntoAsync(cache, serviceTypes, scanTime, retries, cancellationToken);
             MdnsScanner.EvictOlderThan(cache, DeviceTtl);
 
             var devices = cache.Values.OrderBy(d => d.Name).ToList();

@@ -6,4 +6,7 @@
     <Project Path="src/mDNSDiscovery.WebApp/mDNSDiscovery.WebApp.csproj" />
     <Project Path="src/mDNSDiscovery/mDNSDiscovery.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/mDNSDiscovery.Tests/mDNSDiscovery.Tests.csproj" />
+  </Folder>
 </Solution>

@@ -31,6 +31,13 @@ public static class CliOptions
         DefaultValueFactory = _ => 30,
     };
 
+    public static Option<int> Retries() => new("--retries", "-r")
+    {
+        Description = "Times to re-send the query per scan window; raise it on lossy networks so " +
+                      "slow-to-answer devices are less likely to be missed.",
+        DefaultValueFactory = _ => MdnsScanner.DefaultRetries,
+    };
+
     /// <summary>
     /// Resolves user-supplied service filters to concrete mDNS service types. Shorthand values
     /// (e.g. "airplay") are expanded to matching catalog entries; values already containing a dot

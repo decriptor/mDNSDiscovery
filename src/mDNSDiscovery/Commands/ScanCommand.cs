@@ -11,12 +11,14 @@ public static class ScanCommand
     {
         var serviceOption = CliOptions.Service();
         var timeoutOption = CliOptions.Timeout(defaultSeconds: 5);
+        var retriesOption = CliOptions.Retries();
         var formatOption = CliOptions.Format();
 
         var command = new Command("scan", "Discover devices once and print the results.")
         {
             serviceOption,
             timeoutOption,
+            retriesOption,
             formatOption,
         };
 
@@ -24,6 +26,7 @@ public static class ScanCommand
         {
             var filters = parseResult.GetValue(serviceOption) ?? [];
             var timeout = parseResult.GetValue(timeoutOption);
+            var retries = parseResult.GetValue(retriesOption);
             var format = parseResult.GetValue(formatOption);
 
             var serviceTypes = CliOptions.ResolveServiceTypes(filters);
@@ -38,11 +41,11 @@ public static class ScanCommand
                     devices = await AnsiConsole.Status()
                         .StartAsync(
                             $"Scanning {serviceTypes.Count} service type(s) for {timeout}s…",
-                            _ => scanner.ScanAsync(serviceTypes, scanTime, cancellationToken));
+                            _ => scanner.ScanAsync(serviceTypes, scanTime, retries, cancellationToken));
                 }
                 else
                 {
-                    devices = await scanner.ScanAsync(serviceTypes, scanTime, cancellationToken);
+                    devices = await scanner.ScanAsync(serviceTypes, scanTime, retries, cancellationToken);
                 }
 
                 DeviceFormatter.Write(devices, format);

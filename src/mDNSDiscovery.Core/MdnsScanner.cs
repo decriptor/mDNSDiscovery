@@ -13,15 +13,41 @@ namespace mDNSDiscovery.Core;
 /// </summary>
 public sealed class MdnsScanner
 {
+    /// <summary>Default number of times each scan window re-sends its query (Zeroconf's own default).</summary>
+    public const int DefaultRetries = 2;
+
     /// <summary>Endpoints not seen within this window are dropped during a merge.</summary>
     private static readonly TimeSpan EndpointStaleAfter = TimeSpan.FromMinutes(5);
 
-    private readonly ILogger<MdnsScanner> _logger;
+    /// <summary>
+    /// Resolves a set of service types within one scan window. Seam over
+    /// <see cref="ZeroconfResolver"/> so the engine can be driven without a network in tests.
+    /// </summary>
+    public delegate Task<IReadOnlyList<IZeroconfHost>> ProtocolResolver(
+        IReadOnlyList<string> protocols,
+        TimeSpan scanTime,
+        int retries,
+        CancellationToken cancellationToken);
 
-    public MdnsScanner(ILogger<MdnsScanner>? logger = null)
+    private readonly ILogger<MdnsScanner> _logger;
+    private readonly ProtocolResolver _resolve;
+
+    public MdnsScanner(ILogger<MdnsScanner>? logger = null, ProtocolResolver? resolver = null)
     {
         _logger = logger ?? NullLogger<MdnsScanner>.Instance;
+        _resolve = resolver ?? DefaultResolveAsync;
     }
+
+    private static async Task<IReadOnlyList<IZeroconfHost>> DefaultResolveAsync(
+        IReadOnlyList<string> protocols,
+        TimeSpan scanTime,
+        int retries,
+        CancellationToken cancellationToken)
+        => await ZeroconfResolver.ResolveAsync(
+            protocols,
+            scanTime: scanTime,
+            retries: retries,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
     /// <summary>
     /// Performs a single discovery pass over <paramref name="serviceTypes"/> and returns a
@@ -30,23 +56,26 @@ public sealed class MdnsScanner
     public async Task<IReadOnlyList<DeviceInfo>> ScanAsync(
         IEnumerable<string> serviceTypes,
         TimeSpan scanTime,
+        int retries = DefaultRetries,
         CancellationToken cancellationToken = default)
     {
         var cache = new ConcurrentDictionary<string, DeviceInfo>();
-        await ScanIntoAsync(cache, serviceTypes, scanTime, cancellationToken).ConfigureAwait(false);
+        await ScanIntoAsync(cache, serviceTypes, scanTime, retries, cancellationToken).ConfigureAwait(false);
         return cache.Values.OrderBy(d => d.Name).ToList();
     }
 
     /// <summary>
     /// Performs a single discovery pass and merges the results into <paramref name="cache"/>.
-    /// All service types are resolved within one <paramref name="scanTime"/> window. Use this from
-    /// a loop (web background service, CLI watch) to accumulate devices across passes; pair it with
+    /// All service types are resolved within one <paramref name="scanTime"/> window, re-querying
+    /// <paramref name="retries"/> times for redundancy against packet loss. Use this from a loop
+    /// (web background service, CLI watch) to accumulate devices across passes; pair it with
     /// <see cref="EvictOlderThan"/> to drop devices that disappear.
     /// </summary>
     public async Task ScanIntoAsync(
         ConcurrentDictionary<string, DeviceInfo> cache,
         IEnumerable<string> serviceTypes,
         TimeSpan scanTime,
+        int retries = DefaultRetries,
         CancellationToken cancellationToken = default)
     {
         var protocols = serviceTypes as IReadOnlyList<string> ?? serviceTypes.ToList();
@@ -55,12 +84,11 @@ public sealed class MdnsScanner
             return;
         }
 
-        _logger.LogDebug("Scanning {Count} service type(s) for {Seconds}s", protocols.Count, scanTime.TotalSeconds);
+        _logger.LogInformation(
+            "Scanning {Count} service type(s) for {Seconds}s (retries: {Retries})",
+            protocols.Count, scanTime.TotalSeconds, retries);
 
-        var responses = await ZeroconfResolver.ResolveAsync(
-            protocols,
-            scanTime: scanTime,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var responses = await _resolve(protocols, scanTime, retries, cancellationToken).ConfigureAwait(false);
 
         foreach (var response in responses)
         {

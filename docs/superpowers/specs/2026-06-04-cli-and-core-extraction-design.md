@@ -44,23 +44,29 @@ Single source of truth. References **Zeroconf** only.
 
 ## 4. CLI (repurpose `src/mDNSDiscovery`)
 
-- **Stack:** System.CommandLine `2.0.8` + Spectre.Console `0.55.2`. References Core.
+- **Stack:** System.CommandLine + Spectre.Console (latest stable). References Core.
 - **Packaging:** `PackAsTool=true`, `ToolCommandName=mdns`, `RootNamespace=mDNSDiscovery.Cli`.
 - **Commands:**
   - `scan` — one-shot discovery, print, exit.
     Options: `--service/-s <type>` (repeatable filter), `--timeout/-t <sec>` (default 5),
-    `--format/-f table|json|ndjson` (default table), `--all-types/-a`.
+    `--retries/-r <n>` (default 2), `--format/-f table|json|ndjson` (default table).
     Exit code `2` when no devices found (scriptability); `0` otherwise.
   - `watch` — live-refreshing table until Ctrl+C, with 5-min stale eviction.
-    Options: `--service/-s`, `--timeout/-t`, `--interval/-i <sec>` (default 30).
-  - `list-types` — print the service-type catalog. `--format/-f table|json`.
+    Options: `--service/-s`, `--timeout/-t` (default 2), `--retries/-r` (default 2),
+    `--interval/-i <sec>` (default 30), `--format/-f`.
+  - `list-types` — print the service-type catalog. `--format/-f table|json|ndjson`.
 - **Output:** Spectre table (Name · IP · Services · Port); `json` = pretty array via
-  System.Text.Json; `ndjson` = one `DeviceInfo` JSON object per line (streamable).
+  System.Text.Json; `ndjson` = one JSON value per line (a `DeviceInfo` for scan/watch, a
+  service-type string for list-types), streamable.
+- **Robustness:** all service types share one scan window, so a lost reply has fewer
+  chances than a re-scanning `watch`; `--retries` lets one-shot `scan` re-query for
+  redundancy on lossy networks.
 - **Cancellation:** Ctrl+C → cooperative `CancellationToken`.
 
 ## 5. Central package versions
 
-Add to `Directory.Packages.props`: `System.CommandLine 2.0.8`, `Spectre.Console 0.55.2`.
+Add to `Directory.Packages.props` (latest stable): `System.CommandLine`, `Spectre.Console`,
+plus the test project's `MSTest` + `Microsoft.NET.Test.Sdk`.
 
 ## 6. LLM skill
 

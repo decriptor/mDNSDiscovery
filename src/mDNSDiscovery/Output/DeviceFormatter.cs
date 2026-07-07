@@ -67,6 +67,17 @@ public static class DeviceFormatter
         }
     }
 
+    /// <summary>
+    /// Renders a list of service-type strings as a JSON array (<see cref="OutputFormat.Json"/>) or
+    /// as NDJSON — one JSON string per line (<see cref="OutputFormat.Ndjson"/>). Used by list-types.
+    /// </summary>
+    public static string FormatServiceTypes(IReadOnlyList<string> serviceTypes, OutputFormat format) => format switch
+    {
+        OutputFormat.Ndjson => string.Join('\n', serviceTypes.Select(t => JsonSerializer.Serialize(t, NdjsonOptions))),
+        OutputFormat.Json => JsonSerializer.Serialize(serviceTypes, JsonOptions),
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Only Json and Ndjson are supported here."),
+    };
+
     /// <summary>Writes one compact JSON object per device, each on its own line.</summary>
     public static void WriteNdjson(IReadOnlyList<DeviceInfo> devices)
     {
