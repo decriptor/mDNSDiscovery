@@ -5,6 +5,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    <script>
+        // Apply dark/light theme before first paint so there's no flash of the wrong theme.
+        (function () {
+            var mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+            var applyTheme = function () {
+                document.documentElement.setAttribute('data-bs-theme', mql && mql.matches ? 'dark' : 'light');
+            };
+            applyTheme();
+            if (mql && mql.addEventListener) {
+                mql.addEventListener('change', applyTheme);
+            }
+        })();
+    </script>
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">

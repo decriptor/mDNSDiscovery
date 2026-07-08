@@ -8,8 +8,45 @@ html {
   }
 }
 
+/* ==========================================================================
+   Theme: one coherent accent (indigo), expressed as CSS custom properties
+   so light/dark mode and every component below stay in sync. The accent
+   itself (used as a solid background under white button/badge text) stays
+   constant across themes; only --accent-text (accent used as text/links on
+   the page's own background) and the soft tint shift for dark mode so
+   contrast keeps meeting WCAG AA (>= 4.5:1 for normal-size text).
+   ========================================================================== */
+:root {
+  --accent: #4f46e5;             /* indigo-600: ~6.3:1 on white, safe for buttons + text */
+  --accent-rgb: 79, 70, 229;
+  --accent-hover: #4338ca;       /* indigo-700 */
+  --accent-active: #3730a3;      /* indigo-800 */
+  --accent-text: var(--accent);
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --accent-soft-strong: rgba(79, 70, 229, 0.16);
+
+  /* Consolidate Bootstrap's default blue into the same accent */
+  --bs-primary: var(--accent);
+  --bs-primary-rgb: var(--accent-rgb);
+  --bs-link-color: var(--accent-text);
+  --bs-link-color-rgb: var(--accent-rgb);
+  --bs-link-hover-color: var(--accent-hover);
+  --bs-link-hover-color-rgb: 67, 56, 202;
+}
+
+[data-bs-theme="dark"] {
+  --accent-text: #a5b4fc;        /* indigo-300: ~9.4:1 on dark surfaces */
+  --accent-soft: rgba(165, 180, 252, 0.16);
+  --accent-soft-strong: rgba(165, 180, 252, 0.24);
+
+  --bs-link-color: var(--accent-text);
+  --bs-link-color-rgb: 165, 180, 252;
+  --bs-link-hover-color: #c7d2fe;
+  --bs-link-hover-color-rgb: 199, 210, 254;
+}
+
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem var(--bs-body-bg), 0 0 0 0.25rem var(--accent);
 }
 
 html {
@@ -19,7 +56,7 @@ html {
 
 body {
   margin-bottom: 60px;
-  background: #f8f9fa;
+  background: var(--bs-tertiary-bg);
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
@@ -33,9 +70,9 @@ body {
 
 /* Enhanced Device Cards */
 .card {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--bs-border-color);
   border-radius: 12px;
-  background: white;
+  background: var(--bs-body-bg);
 }
 
 .device-custom-icon {
@@ -43,8 +80,8 @@ body {
   width: 100%;
   object-fit: contain;
   padding: 1rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--bs-tertiary-bg);
+  border-bottom: 1px solid var(--bs-border-color);
 }
 
 .device-detail-icon {
@@ -52,12 +89,12 @@ body {
   max-height: 200px;
   object-fit: contain;
   border-radius: 8px;
-  background: #f8f9fa;
+  background: var(--bs-tertiary-bg);
   padding: 1rem;
 }
 
 .card-title {
-  color: #667eea;
+  color: var(--accent-text);
   font-weight: 600;
 }
 
@@ -69,40 +106,27 @@ body {
 
 /* Navbar Enhancement */
 .navbar {
-  background: white !important;
+  background: var(--bs-body-bg) !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .navbar-brand {
   font-weight: 700;
   font-size: 1.3rem;
-  color: #667eea !important;
+  color: var(--accent-text) !important;
   transition: color 0.3s ease;
 }
 
 .navbar-brand:hover {
-  color: #764ba2 !important;
-}
-
-.navbar-brand i {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+  color: var(--accent-hover) !important;
 }
 
 /* Alert Styling */
 .alert-info {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  border: 2px solid rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(var(--accent-rgb), 0.18) 100%);
+  border: 2px solid rgba(var(--accent-rgb), 0.3);
   border-radius: 10px;
-  color: #4a5568;
+  color: var(--bs-body-color);
 }
 
 .alert-warning {
@@ -113,21 +137,8 @@ body {
 
 /* Page Title */
 h1 {
-  color: #2d3748;
+  color: var(--bs-emphasis-color);
   font-weight: 700;
-}
-
-h1 i {
-  animation: rotate 3s linear infinite;
-}
-
-@keyframes rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
 }
 
 /* Device Properties */
@@ -140,42 +151,25 @@ details summary {
 }
 
 details summary:hover {
-  background-color: rgba(102, 126, 234, 0.1);
+  background-color: var(--accent-soft);
 }
 
 details[open] summary {
   margin-bottom: 0.5rem;
-  background-color: rgba(102, 126, 234, 0.15);
+  background-color: var(--accent-soft-strong);
 }
 
 .list-group-item {
   background-color: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--bs-border-color-translucent);
   font-size: 0.9rem;
 }
 
 /* Footer */
 .footer {
-  background: white;
+  background: var(--bs-body-bg);
   box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
 }
-
-/* Loading Animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.col {
-  animation: fadeIn 0.5s ease-out;
-}
-
 
 .card ul li {
   transition: opacity 0.15s ease-in-out;
@@ -199,20 +193,20 @@ details[open] summary {
 /* Filter card styling */
 .form-label {
   font-weight: 600;
-  color: #4a5568;
+  color: var(--bs-secondary-color);
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
 }
 
 .form-select, .form-control {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--bs-border-color);
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .form-select:focus, .form-control:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
 }
 
 #filteredCount {
@@ -228,7 +222,7 @@ details[open] summary {
 }
 
 .device-title-link:hover {
-  color: #667eea;
+  color: var(--accent-text);
   text-decoration: none;
 }
 
@@ -239,25 +233,25 @@ details[open] summary {
 }
 
 .breadcrumb-item a {
-  color: #667eea;
+  color: var(--accent-text);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 .breadcrumb-item a:hover {
-  color: #764ba2;
+  color: var(--accent-hover);
 }
 
 .info-box {
   padding: 1rem;
-  background: #f8f9fa;
+  background: var(--bs-tertiary-bg);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--bs-border-color);
 }
 
 .info-box label {
   font-size: 0.85rem;
-  color: #718096;
+  color: var(--bs-secondary-color);
   font-weight: 600;
   margin-bottom: 0.5rem;
   display: block;
@@ -265,15 +259,15 @@ details[open] summary {
 
 .info-box .info-value {
   font-size: 1.1rem;
-  color: #2d3748;
+  color: var(--bs-emphasis-color);
   font-weight: 500;
 }
 
 /* Property Reference Page */
 .property-key {
   font-weight: 600;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  color: var(--accent-text);
+  background: var(--accent-soft);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.9rem;
@@ -288,11 +282,11 @@ details[open] summary {
 }
 
 .property-name {
-  border-bottom: 1px dotted #667eea;
+  border-bottom: 1px dotted var(--accent-text);
 }
 
 .property-name:hover {
-  color: #667eea;
+  color: var(--accent-text);
 }
 
 /* Tooltip Styling */
@@ -304,4 +298,73 @@ details[open] summary {
   max-width: 300px;
   text-align: left;
   background-color: rgba(45, 55, 72, 0.95);
+}
+
+/* Consolidate Bootstrap's default blue buttons/badges into the app accent */
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--accent);
+  --bs-btn-border-color: var(--accent);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--accent-hover);
+  --bs-btn-hover-border-color: var(--accent-hover);
+  --bs-btn-focus-shadow-rgb: var(--accent-rgb);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--accent-active);
+  --bs-btn-active-border-color: var(--accent-active);
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: var(--accent);
+  --bs-btn-disabled-border-color: var(--accent);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--accent-text);
+  --bs-btn-border-color: var(--accent);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--accent);
+  --bs-btn-hover-border-color: var(--accent);
+  --bs-btn-focus-shadow-rgb: var(--accent-rgb);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--accent);
+  --bs-btn-active-border-color: var(--accent);
+  --bs-btn-disabled-color: var(--accent-text);
+  --bs-btn-disabled-border-color: var(--accent);
+}
+
+/* Network Map (responsive canvas surface) */
+.network-map-container {
+  position: relative;
+  height: 60vh;
+  min-height: 320px;
+  max-height: 600px;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  background: var(--bs-tertiary-bg);
+}
+
+@media (max-width: 576px) {
+  .network-map-container {
+    height: 50vh;
+    min-height: 260px;
+  }
+}
+
+.network-map-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.network-map-tooltip {
+  position: absolute;
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  pointer-events: none;
 }

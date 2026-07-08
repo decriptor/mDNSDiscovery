@@ -3,13 +3,13 @@
 
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-apple"></i> Apple Companion Link</h5>
+        <h5 class="mb-0"><i class="bi bi-apple" aria-hidden="true"></i> Apple Companion Link</h5>
     </div>
     <div class="card-body">
         @if (!HasMatches && !string.IsNullOrWhiteSpace(SearchTerm))
         {
             <div class="alert alert-warning mb-0">
-                <i class="bi bi-search"></i> No matches found for "<strong>@SearchTerm</strong>"
+                <i class="bi bi-search" aria-hidden="true"></i> No matches found for "<strong>@SearchTerm</strong>"
             </div>
         }
         else
@@ -120,7 +120,7 @@
             }
 
             <div class="alert alert-info mt-3 mb-0">
-                <i class="bi bi-info-circle"></i>
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
                 <strong>About Companion Link:</strong> This service enables communication between Apple devices
                 on the same network, allowing features like Handoff, Universal Clipboard, iPhone Cellular Calls
                 on Mac, and other Continuity features to work seamlessly.

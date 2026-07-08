@@ -19,11 +19,26 @@ public class MdnsDiscoveryService : BackgroundService
     private readonly MdnsScanner _scanner;
     private readonly ILogger<MdnsDiscoveryService> _logger;
 
+    // Set on the background scan loop, read from client-side timers/handlers on other threads,
+    // so it needs volatile semantics rather than a plain bool to guarantee cross-thread visibility.
+    private volatile bool _isScanning;
+
     public MdnsDiscoveryService(MdnsScanner scanner, ILogger<MdnsDiscoveryService> logger)
     {
         _scanner = scanner;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Raised after each scan+eviction cycle completes, so subscribers can push fresh data
+    /// to clients (e.g. a Blazor component calling <c>StateHasChanged</c>) instead of polling.
+    /// </summary>
+    public event Action? DevicesChanged;
+
+    /// <summary>
+    /// True while a scan is actively in flight.
+    /// </summary>
+    public bool IsScanning => _isScanning;
 
     public IEnumerable<DeviceInfo> GetDevices() => _devices.Values.OrderBy(d => d.Name);
 
@@ -33,9 +48,13 @@ public class MdnsDiscoveryService : BackgroundService
         {
             try
             {
+                _isScanning = true;
                 await _scanner.ScanIntoAsync(_devices, ServiceCatalog.Default, ScanTime, cancellationToken: stoppingToken);
 
                 MdnsScanner.EvictOlderThan(_devices, DeviceTtl);
+                _isScanning = false;
+
+                DevicesChanged?.Invoke();
 
                 await Task.Delay(ScanInterval, stoppingToken);
             }
@@ -46,6 +65,7 @@ public class MdnsDiscoveryService : BackgroundService
             }
             catch (Exception ex)
             {
+                _isScanning = false;
                 _logger.LogError(ex, "Error during mDNS discovery");
                 await Task.Delay(ErrorBackoff, stoppingToken);
             }

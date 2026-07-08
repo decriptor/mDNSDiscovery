@@ -3,13 +3,13 @@
 
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-globe"></i> HTTP Service Information</h5>
+        <h5 class="mb-0"><i class="bi bi-globe" aria-hidden="true"></i> HTTP Service Information</h5>
     </div>
     <div class="card-body">
         @if (!HasMatches && !string.IsNullOrWhiteSpace(SearchTerm))
         {
             <div class="alert alert-warning mb-0">
-                <i class="bi bi-search"></i> No matches found for "<strong>@SearchTerm</strong>"
+                <i class="bi bi-search" aria-hidden="true"></i> No matches found for "<strong>@SearchTerm</strong>"
             </div>
         }
         else
@@ -20,7 +20,7 @@
                     <dt class="col-sm-4">Service URL</dt>
                     <dd class="col-sm-8">
                         <a href="@HttpServiceInfo.Url" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-box-arrow-up-right"></i> @HttpServiceInfo.Url
+                            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> @HttpServiceInfo.Url
                         </a>
                     </dd>
                 }
@@ -33,14 +33,14 @@
                 {
                     <dt class="col-sm-4">Security</dt>
                     <dd class="col-sm-8">
-                        <span class="badge bg-success"><i class="bi bi-lock-fill"></i> HTTPS (Secure)</span>
+                        <span class="badge bg-success"><i class="bi bi-lock-fill" aria-hidden="true"></i> HTTPS (Secure)</span>
                     </dd>
                 }
                 else
                 {
                     <dt class="col-sm-4">Security</dt>
                     <dd class="col-sm-8">
-                        <span class="badge bg-warning"><i class="bi bi-unlock"></i> HTTP (Unencrypted)</span>
+                        <span class="badge bg-warning"><i class="bi bi-unlock" aria-hidden="true"></i> HTTP (Unencrypted)</span>
                     </dd>
                 }
                 @if (!string.IsNullOrEmpty(HttpServiceInfo.Path))

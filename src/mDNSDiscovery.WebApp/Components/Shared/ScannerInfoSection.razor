@@ -4,7 +4,7 @@
 {
     <div class="border rounded p-3 mb-3">
         <h5 class="d-flex align-items-center gap-2">
-            <i class="bi bi-scanner"></i>
+            <i class="bi bi-scanner" aria-hidden="true"></i>
             Network Scanner
             @if (ScannerInfo?.Available == true)
             {
@@ -29,7 +29,7 @@
                         <div class="mb-2">
                             <strong>Admin URL:</strong>
                             <a href="@ScannerInfo.AdminUrl" target="_blank" class="text-decoration-none">
-                                @ScannerInfo.AdminUrl <i class="bi bi-box-arrow-up-right"></i>
+                                @ScannerInfo.AdminUrl <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
                             </a>
                         </div>
                     }
@@ -51,7 +51,7 @@
                     {
                         <div class="mb-2">
                             <span class="badge bg-info">
-                                <i class="bi bi-arrow-down-up"></i> Duplex Supported
+                                <i class="bi bi-arrow-down-up" aria-hidden="true"></i> Duplex Supported
                             </span>
                         </div>
                     }
@@ -102,7 +102,7 @@
             else
             {
                 <div class="alert alert-warning mt-3 mb-0">
-                    <i class="bi bi-exclamation-triangle"></i>
+                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
                     Scanner service detected but not available
                 </div>
             }

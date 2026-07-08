@@ -1,15 +1,20 @@
 // Network Map Visualization using Canvas
-let canvas, ctx, tooltip;
+let canvas, ctx, tooltip, container;
 let nodes = [];
+let links = [];
+let nodeIndex = {};
 let camera = { x: 0, y: 0, zoom: 1 };
 let isDragging = false;
 let dragStart = { x: 0, y: 0 };
-let selectedNode = null;
 let hoveredNode = null;
+let currentGroupBySubnet = true;
+let resizeObserver = null;
 
 export function renderNetworkMap(networkData, groupBySubnet) {
     canvas = document.getElementById('network-canvas');
     tooltip = document.getElementById('network-tooltip');
+    container = document.getElementById('network-map-container');
+    currentGroupBySubnet = groupBySubnet;
 
     if (!canvas) {
         console.error('Canvas element not found');
@@ -18,38 +23,60 @@ export function renderNetworkMap(networkData, groupBySubnet) {
 
     ctx = canvas.getContext('2d');
 
-    // Set canvas size
-    const container = document.getElementById('network-map-container');
+    // Set canvas size to match the (responsive) container
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
     // Process network data
-    nodes = networkData.nodes.map((node, index) => ({
+    nodes = networkData.nodes.map((node) => ({
         ...node,
         x: 0,
         y: 0,
         vx: 0,
         vy: 0
     }));
+    links = networkData.links || [];
+
+    nodeIndex = {};
+    nodes.forEach(node => {
+        nodeIndex[node.id] = node;
+    });
 
     // Layout nodes
-    if (groupBySubnet) {
-        layoutBySubnet();
-    } else {
-        layoutCircular();
-    }
+    layoutNodes();
 
-    // Setup event listeners
+    // Setup event listeners (idempotent-ish: guarded against double-binding via disposeNetworkMap)
     setupEventListeners();
 
     // Start animation loop
     animate();
 }
 
+function layoutNodes() {
+    if (currentGroupBySubnet) {
+        layoutBySubnet();
+    } else {
+        layoutCircular();
+    }
+}
+
 function layoutBySubnet() {
-    // Group nodes by subnet
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const mainRadius = Math.min(canvas.width, canvas.height) / 3;
+
+    const rootHub = nodes.find(n => n.id === 'hub:root');
+    const subnetHubs = nodes.filter(n => n.isHub && n.id !== 'hub:root');
+    const deviceNodes = nodes.filter(n => !n.isHub);
+
+    if (rootHub) {
+        rootHub.x = centerX;
+        rootHub.y = centerY;
+    }
+
+    // Group device nodes by subnet
     const subnets = {};
-    nodes.forEach(node => {
+    deviceNodes.forEach(node => {
         if (!subnets[node.subnet]) {
             subnets[node.subnet] = [];
         }
@@ -57,20 +84,23 @@ function layoutBySubnet() {
     });
 
     const subnetKeys = Object.keys(subnets);
-    const subnetCount = subnetKeys.length;
-
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const mainRadius = Math.min(canvas.width, canvas.height) / 3;
+    const subnetCount = Math.max(subnetKeys.length, 1);
 
     subnetKeys.forEach((subnet, subnetIndex) => {
         const angle = (subnetIndex / subnetCount) * Math.PI * 2;
         const subnetX = centerX + Math.cos(angle) * mainRadius;
         const subnetY = centerY + Math.sin(angle) * mainRadius;
 
+        const hub = subnetHubs.find(h => h.subnet === subnet);
+        if (hub) {
+            hub.x = subnetX;
+            hub.y = subnetY;
+        }
+
         const subnetNodes = subnets[subnet];
         const nodeCount = subnetNodes.length;
-        const subnetRadius = 80 + nodeCount * 10;
+        // Extra spacing between nodes so labels don't overlap at default zoom
+        const subnetRadius = 90 + nodeCount * 16;
 
         subnetNodes.forEach((node, nodeIndex) => {
             const nodeAngle = (nodeIndex / nodeCount) * Math.PI * 2;
@@ -83,10 +113,18 @@ function layoutBySubnet() {
 function layoutCircular() {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const radius = Math.min(canvas.width, canvas.height) / 3;
+    const radius = Math.min(canvas.width, canvas.height) / 2.4;
 
-    nodes.forEach((node, index) => {
-        const angle = (index / nodes.length) * Math.PI * 2;
+    const rootHub = nodes.find(n => n.id === 'hub:root');
+    const others = nodes.filter(n => n.id !== 'hub:root');
+
+    if (rootHub) {
+        rootHub.x = centerX;
+        rootHub.y = centerY;
+    }
+
+    others.forEach((node, index) => {
+        const angle = (index / Math.max(others.length, 1)) * Math.PI * 2;
         node.x = centerX + Math.cos(angle) * radius;
         node.y = centerY + Math.sin(angle) * radius;
     });
@@ -105,6 +143,29 @@ function setupEventListeners() {
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd);
+
+    // Keep the canvas backing store in sync with its responsive container
+    if (typeof ResizeObserver !== 'undefined' && container) {
+        resizeObserver = new ResizeObserver(() => handleResize());
+        resizeObserver.observe(container);
+    } else {
+        window.addEventListener('resize', handleResize);
+    }
+}
+
+function handleResize() {
+    if (!canvas || !container) return;
+
+    const newWidth = container.clientWidth;
+    const newHeight = container.clientHeight;
+
+    if (newWidth === canvas.width && newHeight === canvas.height) {
+        return;
+    }
+
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    layoutNodes();
 }
 
 function handleMouseDown(e) {
@@ -155,7 +216,7 @@ function handleClick(e) {
     const pos = getMousePos(e);
     const node = getNodeAtPosition(pos.x, pos.y);
 
-    if (node) {
+    if (node && !node.isHub) {
         // Navigate to device details page
         const deviceId = encodeURIComponent(`${node.label}_${node.ip}`);
         window.location.href = `/device/${deviceId}`;
@@ -213,15 +274,19 @@ function getNodeAtPosition(x, y) {
 }
 
 function showTooltip(node, x, y) {
-    tooltip.innerHTML = `
-        <div style="font-weight: bold; margin-bottom: 4px;">${node.label}</div>
-        <div style="font-size: 0.85rem; color: #666;">
-            <div>IP: ${node.ip}</div>
-            <div>Vendor: ${node.vendor}</div>
-            <div>Services: ${node.serviceCount}</div>
-            <div style="margin-top: 4px; font-size: 0.8rem; color: #999;">${node.services}</div>
-        </div>
-    `;
+    if (node.isHub) {
+        tooltip.innerHTML = `<div style="font-weight: bold;">${node.label}</div>`;
+    } else {
+        tooltip.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 4px;">${node.label}</div>
+            <div style="font-size: 0.85rem;">
+                <div>IP: ${node.ip}</div>
+                <div>Vendor: ${node.vendor}</div>
+                <div>Services: ${node.serviceCount}</div>
+                <div style="margin-top: 4px; font-size: 0.8rem; opacity: 0.75;">${node.services}</div>
+            </div>
+        `;
+    }
     tooltip.style.display = 'block';
     tooltip.style.left = (x + 10) + 'px';
     tooltip.style.top = (y + 10) + 'px';
@@ -231,15 +296,25 @@ function hideTooltip() {
     tooltip.style.display = 'none';
 }
 
+function isDarkTheme() {
+    return document.documentElement.getAttribute('data-bs-theme') === 'dark';
+}
+
 function animate() {
+    if (!canvas || !ctx) {
+        return;
+    }
+
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Set up transform
     ctx.save();
 
     // Draw grid
     drawGrid();
+
+    // Draw edges first so nodes render on top of them
+    drawEdges();
 
     // Draw nodes
     nodes.forEach(node => {
@@ -253,11 +328,12 @@ function animate() {
 }
 
 function drawGrid() {
+    const dark = isDarkTheme();
     const gridSize = 50 * camera.zoom;
     const offsetX = (camera.x * camera.zoom) % gridSize;
     const offsetY = (camera.y * camera.zoom) % gridSize;
 
-    ctx.strokeStyle = '#e9ecef';
+    ctx.strokeStyle = dark ? 'rgba(255, 255, 255, 0.08)' : '#e9ecef';
     ctx.lineWidth = 1;
     ctx.beginPath();
 
@@ -276,13 +352,57 @@ function drawGrid() {
     ctx.stroke();
 }
 
+function drawEdges() {
+    if (!links.length) return;
+
+    const dark = isDarkTheme();
+    ctx.strokeStyle = dark ? 'rgba(173, 181, 189, 0.35)' : 'rgba(108, 117, 125, 0.4)';
+    ctx.lineWidth = Math.max(1, 1.5 * camera.zoom);
+
+    links.forEach(link => {
+        const source = nodeIndex[link.source];
+        const target = nodeIndex[link.target];
+        if (!source || !target) return;
+
+        const sx = (source.x + camera.x) * camera.zoom;
+        const sy = (source.y + camera.y) * camera.zoom;
+        const tx = (target.x + camera.x) * camera.zoom;
+        const ty = (target.y + camera.y) * camera.zoom;
+
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+    });
+}
+
+function drawRoundedSquare(cx, cy, half) {
+    const r = Math.min(6, half * 0.5);
+    const x = cx - half;
+    const y = cy - half;
+    const size = half * 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + size - r, y);
+    ctx.arcTo(x + size, y, x + size, y + r, r);
+    ctx.lineTo(x + size, y + size - r);
+    ctx.arcTo(x + size, y + size, x + size - r, y + size, r);
+    ctx.lineTo(x + r, y + size);
+    ctx.arcTo(x, y + size, x, y + size - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+    ctx.fill();
+}
+
 function drawNode(node) {
     const x = (node.x + camera.x) * camera.zoom;
     const y = (node.y + camera.y) * camera.zoom;
     const radius = (node.size / 2) * camera.zoom;
 
     // Skip if off-screen
-    if (x < -radius || x > canvas.width + radius || y < -radius || y > canvas.height + radius) {
+    if (x < -radius - 60 || x > canvas.width + radius + 60 || y < -radius - 60 || y > canvas.height + radius + 60) {
         return;
     }
 
@@ -294,11 +414,15 @@ function drawNode(node) {
         ctx.shadowOffsetY = 2;
     }
 
-    // Draw node circle
+    // Draw node shape: hubs are small rounded squares, devices are circles
     ctx.fillStyle = node.color;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
+    if (node.isHub) {
+        drawRoundedSquare(x, y, radius * 1.1);
+    } else {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
 
     // Draw border
     ctx.strokeStyle = hoveredNode === node ? '#000' : '#fff';
@@ -312,28 +436,34 @@ function drawNode(node) {
     ctx.shadowOffsetY = 0;
 
     // Draw label
-    const fontSize = Math.max(10, 12 * camera.zoom);
-    ctx.font = `${fontSize}px sans-serif`;
-    ctx.fillStyle = '#212529';
+    const dark = isDarkTheme();
+    const fontSize = Math.max(9, (node.isHub ? 11 : 10) * camera.zoom);
+    ctx.font = `${node.isHub ? 'bold ' : ''}${fontSize}px sans-serif`;
+    ctx.fillStyle = dark ? '#e9ecef' : '#212529';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
 
-    // Truncate long labels
+    // Truncate long labels so neighboring labels don't overlap
     let label = node.label;
-    const maxWidth = radius * 2;
-    const textWidth = ctx.measureText(label).width;
-
-    if (textWidth > maxWidth && label.length > 8) {
-        label = label.substring(0, 8) + '...';
+    const maxChars = node.isHub ? 16 : 10;
+    if (label.length > maxChars) {
+        label = label.substring(0, maxChars) + '…';
     }
 
-    ctx.fillText(label, x, y + radius + fontSize + 5);
+    if (node.isHub) {
+        // Hub labels sit above the node; device labels cluster below it,
+        // so putting the hub label on the opposite side avoids collisions.
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(label, x, y - radius - 6);
+    } else {
+        ctx.textBaseline = 'top';
+        ctx.fillText(label, x, y + radius + 4);
+    }
 
     // Draw service count badge
-    if (node.serviceCount > 1) {
-        const badgeRadius = Math.max(8, 10 * camera.zoom);
-        const badgeX = x + radius - badgeRadius;
-        const badgeY = y - radius + badgeRadius;
+    if (!node.isHub && node.serviceCount > 1) {
+        const badgeRadius = Math.max(7, 9 * camera.zoom);
+        const badgeX = x + radius - badgeRadius * 0.5;
+        const badgeY = y - radius + badgeRadius * 0.5;
 
         ctx.fillStyle = '#dc3545';
         ctx.beginPath();
@@ -341,7 +471,8 @@ function drawNode(node) {
         ctx.fill();
 
         ctx.fillStyle = '#fff';
-        ctx.font = `bold ${Math.max(8, 10 * camera.zoom)}px sans-serif`;
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold ${Math.max(7, 9 * camera.zoom)}px sans-serif`;
         ctx.fillText(node.serviceCount, badgeX, badgeY);
     }
 }
@@ -359,4 +490,14 @@ export function disposeNetworkMap() {
         canvas.removeEventListener('touchmove', handleTouchMove);
         canvas.removeEventListener('touchend', handleTouchEnd);
     }
+
+    if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+    } else {
+        window.removeEventListener('resize', handleResize);
+    }
+
+    canvas = null;
+    ctx = null;
 }

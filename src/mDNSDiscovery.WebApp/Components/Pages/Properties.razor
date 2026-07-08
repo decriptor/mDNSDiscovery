@@ -3,19 +3,19 @@
 @inject IJSRuntime JS
 @rendermode InteractiveServer
 
-<PageTitle>mDNS Property Reference</PageTitle>
+<PageTitle>Property Reference · mDNS Discovery</PageTitle>
 
-<div class="container mt-4">
+<div class="container-fluid px-4 py-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/"><i class="bi bi-house"></i> Devices</a></li>
+            <li class="breadcrumb-item"><a href="/"><i class="bi bi-house" aria-hidden="true"></i> Devices</a></li>
             <li class="breadcrumb-item active" aria-current="page">Property Reference</li>
         </ol>
     </nav>
 
     <div class="mb-4">
         <h1 class="mb-3">
-            <i class="bi bi-book"></i> mDNS Property Reference
+            <i class="bi bi-book" aria-hidden="true"></i> mDNS Property Reference
         </h1>
         <p class="lead text-muted">
             Comprehensive guide to mDNS/DNS-SD TXT record properties used by network devices.
@@ -23,7 +23,7 @@
     </div>
 
     <div class="alert alert-info mb-4">
-        <i class="bi bi-info-circle"></i>
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
         <strong>About mDNS Properties:</strong>
         Devices advertise themselves on the network using mDNS (Multicast DNS) and include TXT records
         with key-value pairs that provide additional information about their capabilities, configuration,
@@ -33,7 +33,7 @@
     <div class="row mb-3">
         <div class="col-md-6">
             <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
                 <input type="text" @bind="SearchTerm" @bind:event="oninput" class="form-control" placeholder="Search properties...">
             </div>
         </div>
@@ -43,7 +43,7 @@
     {
         <div class="card mb-4 property-group">
             <div class="card-header">
-                <h4 class="mb-0"><i class="bi bi-tag"></i> @group.Name</h4>
+                <h4 class="mb-0"><i class="bi bi-tag" aria-hidden="true"></i> @group.Name</h4>
                 <p class="mb-0 mt-2 text-muted small">@group.Description</p>
             </div>
             <div class="card-body p-0">
@@ -74,7 +74,7 @@
 
     <div class="card bg-light">
         <div class="card-body">
-            <h5><i class="bi bi-lightbulb"></i> Additional Resources</h5>
+            <h5><i class="bi bi-lightbulb" aria-hidden="true"></i> Additional Resources</h5>
             <ul class="mb-0">
                 <li>
                     <a href="https://datatracker.ietf.org/doc/html/rfc6763" target="_blank" rel="noopener">

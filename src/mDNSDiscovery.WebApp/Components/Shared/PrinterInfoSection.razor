@@ -5,7 +5,7 @@
 {
     <div class="border rounded p-3 mb-3">
         <h5 class="d-flex align-items-center gap-2">
-            <i class="bi bi-printer"></i>
+            <i class="bi bi-printer" aria-hidden="true"></i>
             Printer
             @if (PrinterInfo.Available)
             {
@@ -54,7 +54,7 @@
                 <div class="mb-2">
                     <strong>Admin URL:</strong>
                     <a href="@PrinterInfo.AdminUrl" target="_blank" class="text-decoration-none">
-                        @PrinterInfo.AdminUrl <i class="bi bi-box-arrow-up-right"></i>
+                        @PrinterInfo.AdminUrl <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
                     </a>
                 </div>
             }
@@ -64,7 +64,7 @@
                 <div class="mb-2">
                     <strong>IPP Endpoint:</strong>
                     <a href="@PrinterInfo.IppEndpoint" target="_blank" class="text-decoration-none">
-                        @PrinterInfo.IppEndpoint <i class="bi bi-box-arrow-up-right"></i>
+                        @PrinterInfo.IppEndpoint <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
                     </a>
                 </div>
             }
@@ -77,25 +77,25 @@
                         @if (PrinterInfo.SupportsColor)
                         {
                             <span class="badge bg-info">
-                                <i class="bi bi-palette"></i> Color
+                                <i class="bi bi-palette" aria-hidden="true"></i> Color
                             </span>
                         }
                         @if (PrinterInfo.SupportsDuplex)
                         {
                             <span class="badge bg-info">
-                                <i class="bi bi-arrow-down-up"></i> Duplex
+                                <i class="bi bi-arrow-down-up" aria-hidden="true"></i> Duplex
                             </span>
                         }
                         @if (PrinterInfo.SupportsScan)
                         {
                             <span class="badge bg-info">
-                                <i class="bi bi-scanner"></i> Scan
+                                <i class="bi bi-scanner" aria-hidden="true"></i> Scan
                             </span>
                         }
                         @if (PrinterInfo.SupportsFax)
                         {
                             <span class="badge bg-info">
-                                <i class="bi bi-telephone"></i> Fax
+                                <i class="bi bi-telephone" aria-hidden="true"></i> Fax
                             </span>
                         }
                     </div>
