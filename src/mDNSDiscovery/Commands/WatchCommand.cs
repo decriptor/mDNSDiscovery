@@ -35,6 +35,8 @@ public static class WatchCommand
             var interval = parseResult.GetValue(intervalOption);
             var format = parseResult.GetValue(formatOption);
 
+            CliWarnings.WarnUnknownShorthands(filters);
+
             var serviceTypes = CliOptions.ResolveServiceTypes(filters);
             var scanner = new MdnsScanner();
             var scanTime = TimeSpan.FromSeconds(timeout);
@@ -57,6 +59,11 @@ public static class WatchCommand
             catch (OperationCanceledException)
             {
                 return 0; // Ctrl+C is the normal way to stop watching.
+            }
+            catch (Exception ex)
+            {
+                Consoles.WriteError(ex.Message);
+                return 1;
             }
         });
 
@@ -81,7 +88,10 @@ public static class WatchCommand
                     MdnsScanner.EvictOlderThan(cache, DeviceTtl);
 
                     var devices = cache.Values.OrderBy(d => d.Name).ToList();
-                    ctx.UpdateTarget(DeviceFormatter.BuildTable(devices));
+                    var table = DeviceFormatter.BuildTable(devices);
+                    var count = devices.Count == 0 ? "watching — no devices yet" : $"{devices.Count} device(s)";
+                    table.Caption($"[grey]{count} · updated {DateTime.Now:HH:mm:ss} · Ctrl+C to stop[/]");
+                    ctx.UpdateTarget(table);
                     ctx.Refresh();
 
                     await Task.Delay(delay, cancellationToken);

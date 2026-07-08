@@ -29,6 +29,8 @@ public static class ScanCommand
             var retries = parseResult.GetValue(retriesOption);
             var format = parseResult.GetValue(formatOption);
 
+            CliWarnings.WarnUnknownShorthands(filters);
+
             var serviceTypes = CliOptions.ResolveServiceTypes(filters);
             var scanner = new MdnsScanner();
             var scanTime = TimeSpan.FromSeconds(timeout);
@@ -38,7 +40,7 @@ public static class ScanCommand
                 IReadOnlyList<DeviceInfo> devices;
                 if (format == OutputFormat.Table)
                 {
-                    devices = await AnsiConsole.Status()
+                    devices = await Consoles.Error.Status()
                         .StartAsync(
                             $"Scanning {serviceTypes.Count} service type(s) for {timeout}s…",
                             _ => scanner.ScanAsync(serviceTypes, scanTime, retries, cancellationToken));
@@ -56,6 +58,11 @@ public static class ScanCommand
             catch (OperationCanceledException)
             {
                 return 130; // 128 + SIGINT
+            }
+            catch (Exception ex)
+            {
+                Consoles.WriteError(ex.Message);
+                return 1;
             }
         });
 

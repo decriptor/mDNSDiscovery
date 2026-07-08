@@ -18,6 +18,9 @@ public static class DeviceFormatter
         WriteIndented = false,
     };
 
+    private const int NameColumnWidth = 32;
+    private const int ServicesColumnWidth = 28;
+
     /// <summary>Builds a renderable table of devices (Name · IP · Services · Port).</summary>
     public static Table BuildTable(IReadOnlyList<DeviceInfo> devices)
     {
@@ -30,14 +33,29 @@ public static class DeviceFormatter
 
         foreach (var device in devices)
         {
+            var name = string.IsNullOrWhiteSpace(device.Name) ? "(unnamed)" : device.Name;
             table.AddRow(
-                Markup.Escape(string.IsNullOrWhiteSpace(device.Name) ? "(unnamed)" : device.Name),
+                Markup.Escape(Truncate(name, NameColumnWidth)),
                 Markup.Escape(device.IPAddress),
-                Markup.Escape(string.Join(", ", ShortServiceNames(device))),
+                Markup.Escape(Truncate(string.Join(", ", ShortServiceNames(device)), ServicesColumnWidth)),
                 device.Port > 0 ? device.Port.ToString() : "-");
         }
 
         return table;
+    }
+
+    /// <summary>
+    /// Truncates <paramref name="text"/> to at most <paramref name="maxLength"/> characters,
+    /// appending an ellipsis so long device names stay on one table row.
+    /// </summary>
+    public static string Truncate(string text, int maxLength)
+    {
+        if (maxLength <= 0 || text.Length <= maxLength)
+        {
+            return text;
+        }
+
+        return string.Concat(text.AsSpan(0, maxLength - 1), "…");
     }
 
     /// <summary>Writes the devices in the requested format to the console (table/json/ndjson).</summary>

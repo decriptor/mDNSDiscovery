@@ -8,4 +8,10 @@ var root = new RootCommand("mdns — discover mDNS / DNS-SD devices on your loca
     ListTypesCommand.Create(),
 };
 
+// Bare `mdns` shows help and exits 0 (self-discovery) instead of erroring with exit 1.
+if (args.Length == 0)
+{
+    args = ["--help"];
+}
+
 return await root.Parse(args).InvokeAsync();
